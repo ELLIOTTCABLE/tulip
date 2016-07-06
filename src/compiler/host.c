@@ -50,14 +50,10 @@ int Lchar_reader_next(lua_State* s) {
 
   if (!out) return 0;
 
-  // [jneen] this is sad.
-  char* b = malloc(2 * sizeof(char));
-  b[0] = out;
-  b[1] = '\0';
+  char b[2] = { out, '\0' };
 
   lua_pushstring(s, b);
 
-  free(b);
   return 1;
 }
 
