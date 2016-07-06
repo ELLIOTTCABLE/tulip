@@ -65,45 +65,78 @@ end
 function inspect_value(t)
   if type(t) == 'table' and t.tag then return inspect_tag(t)
   elseif type(t) == 'table' and t.tokid then return inspect_token(t)
-  elseif type(t) == 'string' then return '\'{' .. t .. '}'
+  elseif type(t) == 'string' then return '"' .. t .. '"'
   else
     return tostring(t)
   end
 end
 
 function Token(id, value, range)
-  return {
-    tokid = id,
-    value = value,
-    range = range
-  }
+  if range ~= '<synthetic>' then
+    range = tag('range', range.start, range.final)
+  end
+
+  return tag('tok', id, value, range)
+end
+
+function tokid(tok)
+  if not matches_tag(tok, 'tok', 3) then return end
+
+  return tag_get(tok, 0)
+end
+
+function tokvalue(tok)
+  if not matches_tag(tok, 'tok', 3) then return end
+
+  return tag_get(tok, 1)
+end
+
+function tokrange(tok)
+  if not matches_tag(tok, 'tok', 3) then return end
+
+  return tag_get(tok, 2)
+end
+
+function check_tok(tok, type)
+  return tokid(tok) == type
 end
 
 function inspect_loc(loc)
-  return loc.line .. ':' .. loc.column
+  local line = tag_get(loc, 2)
+  local column = tag_get(loc, 3)
+  return line .. ':' .. column
 end
 
 function inspect_range(range)
   if range == '<synthetic>' then return '' end
 
-  return '<' .. range.start.input .. ':' ..
-          inspect_loc(range.start) .. '-' ..
-          inspect_loc(range.final) .. '>'
+  local start = tag_get(range, 0)
+  local final = tag_get(range, 1)
+
+  local input = tag_get(start, 0)
+
+  return '<' .. input .. ':' ..
+                inspect_loc(start) .. '-' ..
+                inspect_loc(final) .. '>'
 end
 
-function inspect_token(token)
-  local name = token_names[token.tokid]
-  local range = inspect_range(token.range)
+function inspect_token(id, value, range)
+  local name = token_names[id]
+
+  range = inspect_range(range)
+
   local raw = nil
 
-  if token.value then
-    raw = name .. '(' .. token.value .. ')'
+  if value then
+    raw = name .. '(' .. value .. ')'
   else
     raw = name
   end
 
   return raw .. '@' .. range
 end
+
+impl_inspect_tag('tok', 3, inspect_token)
 
 return {
   string_reader = string_reader,

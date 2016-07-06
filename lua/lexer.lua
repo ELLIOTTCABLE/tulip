@@ -152,12 +152,14 @@ local function new(stream)
   end
 
   function current_location()
-    return {
-      input = stream.input_name(),
-      index = state.index,
-      line = state.line,
-      column = state.column
-    }
+    return tag('location', stream.input_name(),
+                           state.index,
+                           state.line,
+                           state.column)
+  end
+
+  function loc_index(loc)
+    return tag_get(loc, 1)
   end
 
   function error(...)
@@ -216,7 +218,7 @@ local function new(stream)
     local value = recorded_value()
     local final = final_loc()
 
-    assert(token == token_ids.EOF or state.index ~= start.index, 'must advance the stream! (at ' .. start.index .. ')')
+    assert(token == token_ids.EOF or state.index ~= loc_index(start), 'must advance the stream! (at ' .. loc_index(start) .. ')')
 
     return Token(token, value, { start = start, final = final })
   end

@@ -23,7 +23,7 @@ end
 
 local function is_token(skel, toktype)
   if not matches_tag(skel, 'skeleton/token', 1) then return false end
-  return tag_get(skel, 0).tokid == Lexer.token_ids[toktype]
+  return check_tok(tag_get(skel, 0), Lexer.token_ids[toktype])
 end
 
 local function brace(items)
@@ -43,8 +43,8 @@ local function macro_use(skel)
   if not matches_tag(skel, 'skeleton/nested', 3) then return nil end
   local open_tok = tag_get(skel, 0)
 
-  if open_tok.tokid == Lexer.token_ids.MACRO then
-    return open_tok.value
+  if check_tok(open_tok, Lexer.token_ids.MACRO) then
+    return tokvalue(open_tok)
   else
     return nil
   end

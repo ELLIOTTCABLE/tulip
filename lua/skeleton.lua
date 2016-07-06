@@ -25,9 +25,9 @@ function parse_skeleton(lexer)
 end
 
 function is_closing(tok)
-  return tok.tokid == token_ids.RBRACK or
-         tok.tokid == token_ids.RBRACE or
-         tok.tokid == token_ids.RPAREN
+  return check_tok(tok, token_ids.RBRACK) or
+         check_tok(tok, token_ids.RBRACE) or
+         check_tok(tok, token_ids.RPAREN)
 end
 
 function unexpected(token, matching, message)
@@ -99,13 +99,13 @@ function _parse_sequence(lexer, open_tok, expected_close_id)
 
     if not tok then
       return -- the lexer had an error
-    elseif tok.tokid == token_ids.EOF then
+    elseif check_tok(tok, token_ids.EOF) then
       if open_tok then
         return unmatched(open_tok, token_names[expected_close_id])
       else
         return final_items()
       end
-    elseif open_tok and tok.tokid == expected_close_id then
+    elseif open_tok and check_tok(tok, expected_close_id) then
       return tag('skeleton/nested', open_tok, tok, final_items())
     elseif is_closing(tok) then
       if open_tok then
@@ -113,37 +113,37 @@ function _parse_sequence(lexer, open_tok, expected_close_id)
       else
         return unexpected(tok, tag('none'), 'invalid nesting')
       end
-    elseif tok.tokid == token_ids.LT then
+    elseif check_tok(tok, token_ids.LT) then
       table.insert(elements, _parse_sequence(lexer, tok, token_ids.GT))
-    elseif tok.tokid == token_ids.LPAREN then
+    elseif check_tok(tok, token_ids.LPAREN) then
       table.insert(elements, _parse_sequence(lexer, tok, token_ids.RPAREN))
-    elseif tok.tokid == token_ids.LBRACK or tok.tokid == token_ids.MACRO then
+    elseif check_tok(tok, token_ids.LBRACK) or check_tok(tok, token_ids.MACRO) then
       local open = lexer.next()
-      if open.tokid == token_ids.LPAREN then
+      if check_tok(open, token_ids.LPAREN) then
         table.insert(elements, _parse_sequence(lexer, tok, token_ids.RPAREN))
-      elseif open.tokid == token_ids.LBRACK then
+      elseif check_tok(open, token_ids.LBRACK) then
         table.insert(elements, _parse_sequence(lexer, tok, token_ids.RBRACK))
       else
         return unexpected(open, tag('some', tok), 'invalid macro opening')
       end
-    elseif tok.tokid == token_ids.LBRACE then
+    elseif check_tok(tok, token_ids.LBRACE) then
       table.insert(elements, _parse_sequence(lexer, tok, token_ids.RBRACE))
-    elseif tok.tokid == token_ids.ANNOT or tok.tokid == token_ids.PANNOT then
+    elseif check_tok(tok, token_ids.ANNOT) or check_tok(tok, token_ids.PANNOT) then
       flush_annotation()
 
       current_annotation = elements
       table.insert(current_annotation, tag('skeleton/token', tok))
-    elseif tok.tokid == token_ids.NL then
+    elseif check_tok(tok, token_ids.NL) then
       flush_annotation()
       flush_item()
-    elseif tok.tokid == token_ids.NL and eats_preceding_newline[lexer.peek().tokid] then
+    elseif check_tok(tok, token_ids.NL) and eats_preceding_newline[tokid(lexer.peek())] then
       -- pass
     else
       table.insert(elements, tag('skeleton/token', tok))
 
-      if tok.tokid == token_ids.GT then
+      if check_tok(tok, token_ids.GT) then
         -- manually skip NL tokens here, since the lexer can't for <...>
-        while lexer.peek().tokid == token_ids.NL do lexer.next() end
+        while check_tok(lexer.peek(), token_ids.NL) do lexer.next() end
       end
     end
   end
