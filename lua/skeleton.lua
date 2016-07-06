@@ -121,7 +121,7 @@ function _parse_sequence(lexer, open_tok, expected_close_id)
       local open = lexer.next()
       if open.tokid == token_ids.LPAREN then
         table.insert(elements, _parse_sequence(lexer, tok, token_ids.RPAREN))
-      elseif open.tokid == token_ids.RPAREN then
+      elseif open.tokid == token_ids.LBRACK then
         table.insert(elements, _parse_sequence(lexer, tok, token_ids.RBRACK))
       else
         return unexpected(open, tag('some', tok), 'invalid macro opening')

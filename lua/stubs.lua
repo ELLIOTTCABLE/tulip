@@ -1,29 +1,24 @@
 -- TODO: pass this into the compile function as a
 -- file or string reader
-function string_reader(input)
-  local state = {
-    index = 0
-  }
-
-  function setup() state.index = 0 end
-  function teardown() end
-
-  function next()
-    if state.index >= #input then return nil end
-
-    state.index = state.index + 1
-    return string.sub(input, state.index, state.index)
-  end
-
-  function input_name()
-    return '{input-string}'
-  end
+function string_reader(input_name, input)
+  local state = { host_reader = nil }
 
   return {
-    setup = setup,
-    next = next,
-    teardown = teardown,
-    input_name = input_name
+    setup = function()
+      state.host_reader = _G.__compiler_reader_setup(input, #input)
+    end,
+
+    teardown = function()
+      _G.__compiler_reader_teardown(state.host_reader)
+    end,
+
+    next = function()
+      return _G.__compiler_reader_next(state.host_reader)
+    end,
+
+    input_name = function()
+      return input_name
+    end,
   }
 end
 

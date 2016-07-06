@@ -15,6 +15,34 @@ local function compile(reader)
   return errors, out
 end
 
+local function repl()
+  local state = { line = 0 }
+  while true do
+    state.line = state.line + 1
+    io.stdout:write('> ')
+    local input = io.stdin:read()
+
+    if not input then break end
+
+    local reader = Stubs.string_reader('<repl:' .. state.line .. '>', input)
+
+    local errors, out = compile(reader)
+
+    if #errors == 0 then
+      print('parsed: ' .. Stubs.inspect_value(out.skel))
+      print('expanded: ' .. Stubs.inspect_value(out.expanded))
+    else
+      for _,e in pairs(errors) do
+        print('error: ' .. Stubs.inspect_value(e))
+      end
+    end
+  end
+end
+
+_G.init = function()
+  repl()
+end
+
 return {
   compile = compile
 }

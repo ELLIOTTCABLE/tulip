@@ -19,6 +19,7 @@ int Lchar_reader_setup(lua_State* s) {
   int length = lua_tointeger(s, 2);
 
   lua_pushlightuserdata(s, char_reader_setup(input, length));
+
   return 1;
 }
 
@@ -44,11 +45,19 @@ char char_reader_next(char_reader_state* state) {
 
 int Lchar_reader_next(lua_State* s) {
   char_reader_state* state = lua_topointer(s, 1);
-  char* b = "\0";
 
-  b[0] = char_reader_next(state);
+  char out = char_reader_next(state);
+
+  if (!out) return 0;
+
+  // [jneen] this is sad.
+  char* b = malloc(2 * sizeof(char));
+  b[0] = out;
+  b[1] = '\0';
 
   lua_pushstring(s, b);
+
+  free(b);
   return 1;
 }
 
@@ -146,7 +155,7 @@ tulip_compiler_state* tulip_compiler_start() {
     printf("lua loadtime error: %s\n", lua_tostring(state->lua_state, -1));
   }
 
-  lua_getglobal(state->lua_state, "compile");
+  lua_getglobal(state->lua_state, "init");
 
   if (lua_pcall(state->lua_state, 0, 1, 0) != 0) {
     printf("lua runtime error: %s\n", lua_tostring(state->lua_state, -1));
