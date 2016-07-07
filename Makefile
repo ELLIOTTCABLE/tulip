@@ -1,18 +1,38 @@
 cflags = --std=c11 -Isrc/ -g -lm -lLLVM -l"lua5.2"
-srcs   = src/types/core.c src/types/value.c src/runtime/init.c src/compiler/host.c src/main.c
+libs   = ./src/*/*.c
+main   = ./src/main.c
+
+scaffold = ./test/scaffold.c
+
+BINARY = ./build/tulip
+TEST   = ./build/tulip-test
 
 .PHONY: build run clean help
 
 build: binary
-run:
+run: $(BINARY)
 	./build/tulip
+
 clean:
 	rm build/**
-help:
-  echo "targets: build, run, clean"
 
-binary:
+help:
+	echo "targets: build, run, clean"
+
+.PHONY: binary
+binary: $(BINARY)
+
+$(BINARY): $(libs) $(main)
 	mkdir -p build
-	clang $(cflags) $(srcs) -o build/tulip
+	clang $(cflags) $^ -o $@
+
+.PHONY: test-build test
+test-build: $(TEST)
+test: $(TEST)
+	$(TEST)
+
+$(TEST): $(libs) $(scaffold)
+	mkdir -p build
+	clang $(cflags) $^ -o $@
 
 # library:
