@@ -7,7 +7,7 @@
 ```
 
 [coc]: http://tinyurl.com/tulip-conduct "Code of Conduct"
-[intro]: https://github.com/tulip-lang/tulip/blob/master/doc/intro.md#readme
+[intro]: https://gitlab.com/tulip-lang/tulip/blob/master/doc/intro.md
 
 [Tulip is a language!][intro]
 
