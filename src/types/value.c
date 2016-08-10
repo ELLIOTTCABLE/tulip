@@ -1,5 +1,9 @@
-// constructors and invariant checks for tulip-core's base value types
-// documented more rigorously in doc/core.org
+// value
+// this file defines the unified representation for tulip values
+// only tags, closures, and literals are distinguished
+// this format should be used for all interchange between larger components
+// other components should define specialized representations if other distinctions are needed
+// [doc] doc/core.org
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -8,33 +12,8 @@
 
 #include "types/value.h"
 
-char* show_value(tulip_value v) {
-  if (v.type == TULIP_VALUE_LITERAL) {
-    if (v.literal.type == TULIP_LITERAL_STRING) {
-      char* str = malloc(sizeof(char) * (strlen(v.literal.string) + 2));
-      sprintf(str, "\"%s\"", v.literal.string);
-      return str;
-    } else if(v.literal.type == TULIP_LITERAL_NUMBER) {
-      char* str = malloc(sizeof(char) * 10);     // length is arbitrary
-      snprintf(str, 10, "%g", v.literal.number); // because this doesn't pad right
-      return str;
-    }
-    return "invalid literal";
-  } else if (v.type == TULIP_VALUE_TAG) {
-    if (0 < v.tag.length) {
-      // todo implement tree printing
-      char* str = malloc(sizeof(char) * strlen(v.tag.name) + 5);
-      sprintf(str, ".%s ...", v.tag.name);
-      return str;
-    } else {
-      char* str = malloc(sizeof(char) * strlen(v.tag.name) + 1);
-      sprintf(str, ".%s", v.tag.name);
-      return str;
-    }
-  } else {
-    return "you can't print this silly";
-  }
-}
+////////////////////////////////////////////////////////////////////////////////
+// builders
 
 tulip_value build_string(char* s) {
   return (tulip_value) { .type = TULIP_VALUE_LITERAL
@@ -81,7 +60,7 @@ tulip_tag* append_tag(tulip_tag* t, tulip_value v) {
       t->contents[t->length] = v;
       t->length += 1;
     } else {
-      // todo better error handling
+      // [todo] better error handling here
       printf("array resize failed");
     }
   } else {
@@ -91,6 +70,9 @@ tulip_tag* append_tag(tulip_tag* t, tulip_value v) {
 
   return t;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// validators
 
 bool validate_tag(tulip_value t) {
   // failed malloc or constructor not used
@@ -106,4 +88,35 @@ bool validate_tag(tulip_value t) {
     return false;
 
   return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// pretty printing
+
+char* show_value(tulip_value v) {
+  if (v.type == TULIP_VALUE_LITERAL) {
+    if (v.literal.type == TULIP_LITERAL_STRING) {
+      char* str = malloc(sizeof(char) * (strlen(v.literal.string) + 2));
+      sprintf(str, "\"%s\"", v.literal.string);
+      return str;
+    } else if(v.literal.type == TULIP_LITERAL_NUMBER) {
+      char* str = malloc(sizeof(char) * 10);     // [note] length is arbitrary
+      snprintf(str, 10, "%g", v.literal.number); // [cont] because this doesn't pad right
+      return str;
+    }
+    return "invalid literal";
+  } else if (v.type == TULIP_VALUE_TAG) {
+    if (0 < v.tag.length) {
+      // todo implement tree printing
+      char* str = malloc(sizeof(char) * strlen(v.tag.name) + 5);
+      sprintf(str, ".%s ...", v.tag.name);
+      return str;
+    } else {
+      char* str = malloc(sizeof(char) * strlen(v.tag.name) + 1);
+      sprintf(str, ".%s", v.tag.name);
+      return str;
+    }
+  } else {
+    return "you can't print this silly";
+  }
 }

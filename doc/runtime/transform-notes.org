@@ -1,0 +1,38 @@
+* thunking
+to start, i'm wrapping all values in fns and making calls for all name dereferences
+calls need to precede their use site to guarantee strict semantics
+** eg
+*** tulip
+f x
+*** ir
+%loc_x = call x
+%loc_ret_f = call f [%loc_x]
+ret %loc_ret_f
+*** tulip
+f (g x)
+*** ir
+%loc_x = call x
+%loc_ret_g = call g [%loc_x]
+%loc_ret_f = call f [%loc_ret_g]
+ret %loc_ret_f
+* currying
+functions that take multiple arguments need to be guarded in ir for partial application
+** eg
+*** tulip
+f x y = y
+*** ir
+%f_cls = { %tulip_value, %f_cls (%tulip_value)* }
+%f1
+*** tulip
+f x y
+*** ir
+%loc_x = call x
+%loc_f1 = call f1 [%loc_x]
+%loc_y = call y
+%loc_f1fn = extractvalue %f_cls %loc_f1 1
+%loc_f2 = call %loc_f1fn [%loc_y] 
+%loc_fvs = extractvalue %f_cls %loc_f2 0 
+%loc_ret_f = call f
+
+
+

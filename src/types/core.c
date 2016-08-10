@@ -1,14 +1,14 @@
 // tulip-core definitions and invariant validation
 // more rigorously documented in doc/core.org
 
+#include "types/core.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 
-#include "types/core.h"
-
-// decl
+// forward decl
 bool validate_tree(tulip_value subject);
 bool validate_any(tulip_value subject);
 
@@ -28,6 +28,34 @@ tulip_value cons(tulip_value array[], int length) {
   // build and return head pair
   tulip_value head = build_tag("cons", 2, (tulip_value[]){array[0], swap});
   return head;
+}
+
+unsigned int cons_length(tulip_value start){
+  tulip_value* cur = &start;
+  unsigned int i = 0;
+
+  while(strcmp(cur->tag.name, "nil") != 0) {
+    i++;
+    cur = &cur->tag.contents[1];
+  }
+
+  return i;
+}
+
+tulip_value* uncons(tulip_value cons) {
+  unsigned int length = cons_length(cons);
+  tulip_value* list = malloc(sizeof(tulip_value) * length);
+
+  unsigned int i = 0;
+  tulip_value* cur = &cons;
+
+  while(strcmp(cur->tag.name, "nil") != 0) {
+    list[i] = cur->tag.contents[0];
+    i++;
+    cur = &cur->tag.contents[1];
+  }
+
+  return list;
 }
 
 bool validate_cons(tulip_value subject) {
@@ -172,9 +200,9 @@ bool validate_apply(tulip_value subject){
   if (!strcmp(subject.tag.name, "apply"))
     return false;
 
-  // call is a literal
+  // call is a valid tulip value
   // note im not sure if reusing validate here is exhaustive but it sure is convenient
-  if (validate_literal(subject.tag.contents[0]))
+  if (validate_any(subject.tag.contents[0]))
     return false;
 
   // args is not a cons

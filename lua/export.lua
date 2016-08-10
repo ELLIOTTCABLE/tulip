@@ -5,7 +5,7 @@ local Errors = require 'lua/errors'
 local Macros = require 'lua/macros'
 local Compiler = require 'lua/compiler'
 
-local function compile(reader)
+function compile(reader)
   local lexer = Lexer.new(reader)
   local out = {}
   local compiler = Compiler.compiler()

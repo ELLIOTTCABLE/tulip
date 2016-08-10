@@ -10,16 +10,19 @@
 #include <llvm-c/Core.h>
 #include <llvm-c/ExecutionEngine.h>
 
+#include "runtime/modules.h"
+
 typedef struct tulip_runtime_allocator {
-  void* region;
+  void*  region;
   size_t width;
-  int length;
+  int    length;
 } tulip_runtime_allocator;
 
 typedef struct tulip_runtime_state {
   tulip_runtime_allocator allocator;
-  LLVMModuleRef toplevel_module;
-  LLVMExecutionEngineRef jit_instance;
+  tulip_runtime_module*   modules;
+  int                     num_modules;
+  LLVMExecutionEngineRef  jit_instance;
 
 } tulip_runtime_state;
 
