@@ -1,4 +1,4 @@
-cflags = --std=c11 -Isrc/ -g -lm -lLLVM -l"lua5.2"
+cflags = --std=c11 -Isrc/ -g -lm -gdwarf-2 -g3 -lLLVM -l"lua5.2"
 libs   = ./src/*/*.c
 main   = ./src/main.c
 
@@ -12,6 +12,9 @@ TEST   = ./build/tulip-test
 build: binary
 run: $(BINARY)
 	./build/tulip
+
+debug: $(BINARY)
+	gdb $^
 
 clean:
 	rm build/**

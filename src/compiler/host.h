@@ -18,7 +18,7 @@ void char_reader_teardown(char_reader_state* state);
 char char_reader_next(char_reader_state* state);
 
 tulip_value compiler_create_tag(char* name, int length, tulip_value* values);
-tulip_value compiler_tag_get(tulip_value tag, unsigned int index);
+tulip_value* compiler_tag_get(tulip_value tag, unsigned int index);
 bool compiler_matches_tag(tulip_value tag, char* name, int arity);
 char* compiler_inspect_value(tulip_value value);
 

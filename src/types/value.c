@@ -52,6 +52,14 @@ tulip_value build_number(double n) {
                        };
 }
 
+tulip_value build_discrete(long n) {
+  return (tulip_value) { .type = TULIP_VALUE_LITERAL
+                       , .literal = (tulip_literal) { .type = TULIP_LITERAL_DISCRETE
+                                                    , .discrete = n
+                                                    }
+                       };
+}
+
 tulip_value build_tag(char* name, unsigned int length, tulip_value contents[]) {
   tulip_value* c = (length < 5) ? malloc(sizeof(tulip_value) * 5)
                                 : malloc(sizeof(tulip_value) * length);

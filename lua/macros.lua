@@ -59,14 +59,14 @@ local function replace_macros(skels)
     if macro_name then
       found_macro_state.value = true
       return macro_registry[macro_name](tag_get(skel, 2))
-    elseif skel.tag == 'skeleton/nested' then
+    elseif matches_tag(skel, 'skeleton/nested', 3) then
       return tag('skeleton/nested', tag_get(skel, 0),
                                     tag_get(skel, 1),
                                     replace_macros(tag_get(skel, 2)))
-    elseif skel.tag == 'skeleton/item' then
+    elseif matches_tag(skel, 'skeleton/item', 2) then
       return tag('skeleton/item', replace_macros(tag_get(skel, 0)),
                                   replace_macros(tag_get(skel, 1)))
-    elseif skel.tag == 'skeleton/annotation' then
+    elseif matches_tag(skel, 'skeleton/annotation', 1) then
       return tag('skeleton/annotation', replace_macros(tag_get(skel, 0)))
     else
       return skel
