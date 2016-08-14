@@ -14,7 +14,7 @@ bool validate_any(tulip_value subject);
 
 // takes an array of tulip values
 // returns `.cons array[0] (.cons array[1] ...)`
-tulip_value cons(tulip_value array[], int length) {
+tulip_value cons(tulip_value array[], unsigned int length) {
   // build `.cons array[n] .nil` tail pair
   tulip_value nil = build_tag("nil", 0, NULL);
   tulip_value tail = build_tag("cons", 2, (tulip_value[]){array[length-1], nil}); //inlining these list constructors seems a little weird but it's working consistently
@@ -100,8 +100,17 @@ bool validate_literal(tulip_value subject) {
 
 // x
 // .name "x"
-tulip_value name(char* identifier) {
-  return build_tag("name", 1, (tulip_value[]){build_string(identifier)});
+tulip_value name(char** modulePath, unsigned int modulePathLen, char* identifier) {
+
+  tulip_value strs[modulePathLen];
+
+  for (unsigned int i = 0; i < modulePathLen; i++) {
+    strs[i] = literal_string(modulePath[i]);
+  }
+
+  tulip_value modp = cons(strs, modulePathLen);
+
+  return build_tag("name", 2, (tulip_value[]){modp, build_string(identifier)});
 }
 
 bool validate_name(tulip_value subject) {
@@ -120,7 +129,7 @@ bool validate_name(tulip_value subject) {
   return true;
 }
 
-tulip_value tag(char* name, int length, tulip_value arguments[]){
+tulip_value tag(char* name, unsigned int length, tulip_value arguments[]){
   return build_tag("tag", 2, (tulip_value[]){build_string(name), cons(arguments, length)});
 }
 
@@ -147,7 +156,7 @@ bool validate_tag_ast(tulip_value subject) { // note should probably do somethin
 
 // { `statements[1]`; `statements[2]`; ... }
 // .block (.cons `statements[1]` (.cons `statements[2]` ...))
-tulip_value block(tulip_value statements[], int length){
+tulip_value block(tulip_value statements[], unsigned int length){
   return build_tag("block", 1, (tulip_value[]){cons(statements, length)});
 }
 
@@ -192,7 +201,7 @@ bool validate_lambda(tulip_value subject){
 
 // f x y
 // .apply (.name f) (.cons x (.cons y))
-tulip_value apply(tulip_value call, tulip_value args[], int saturation){
+tulip_value apply(tulip_value call, tulip_value args[], unsigned int saturation){
   return build_tag("apply", 2, (tulip_value[]){call, cons(args, saturation)});
 }
 bool validate_apply(tulip_value subject){
@@ -240,7 +249,7 @@ bool validate_let(tulip_value subject){
 
 // println/1 x
 // .builtin "println" 1 (.cons (.name x) nil)
-tulip_value builtin(char* builtin_name, int arity, tulip_value args[], int saturation) {
+tulip_value builtin(char* builtin_name, unsigned int arity, tulip_value args[], unsigned int saturation) {
   return build_tag("builtin", 3, (tulip_value[]){build_string(builtin_name), build_number(arity), cons(args, saturation)});
 }
 
@@ -271,7 +280,7 @@ bool validate_builtin(tulip_value subject){
 
 // takes two lists of tulip values (same length) as predicate/consequence pairs
 // returns `.branch (.cons ...) (.cons ...)`
-tulip_value branch(tulip_value predicates[], tulip_value consequences[], int length) {
+tulip_value branch(tulip_value predicates[], tulip_value consequences[], unsigned int length) {
   return build_tag("branch", 2, (tulip_value[]){cons(predicates, length), cons(consequences, length)});
 }
 bool validate_branch(tulip_value subject){

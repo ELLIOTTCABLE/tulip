@@ -19,7 +19,10 @@ typedef enum {
 
 typedef struct tulip_runtime_ast_value tulip_runtime_ast_value;
 
-typedef char* tulip_runtime_ast_name;
+typedef struct tulip_runtime_ast_name {
+  char** modulePath;
+  char*  name;
+} tulip_runtime_ast_name;
 
 typedef struct tulip_runtime_ast_literal {
   enum {
