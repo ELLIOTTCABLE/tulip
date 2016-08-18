@@ -1,0 +1,23 @@
+todo
+* hello world
+* basic expressions
+* fake repl
+* naive gc
+* partial application
+* some stubby prelude
+* intermediate module format
+
+optional
+* repl
+* not-shit gc
+* processes
+* lazy
+* fix weird logging framework
+* test parse errors
+* shimming mutable refs
+
+after stl
+* objects
+* first class modules
+* open methods
+* code server
