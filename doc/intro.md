@@ -191,9 +191,12 @@ I strongly dislike macros that can hide in code.  I get really frustrated when I
 
 ``` tulip
 \list[1; 2; 3]
+\list(1 2 3)
 ```
 
-The implementation syntax for these is still in design phase, but they will take after rust in that they will pattern-match against syntax, and result in new syntax.  I expect `list` to be so common that for that special case it is permitted to leave off the macro name: `/[1; 2; 3]` is equivalent.
+The semicolons here can also be newlines.
+
+The implementation syntax for these is still in design phase, but they will take after rust in that they will pattern-match against syntax, and result in new syntax.  I expect `list` to be so common that for that special case it is permitted to leave off the macro name: `\[1; 2; 3]` is equivalent.
 
 Strings can be represented with the familiar `"double quote syntax"`, or delimited with `'{...}`, which balances curly braces and respects `\{` and `\}`.  But since many string literals are much simpler, you can also use `'` as a one-sided delimiter that scans to whitespace or one of the delimiters `]`, `)`, or `>`.  Here are some examples:
 
