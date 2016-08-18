@@ -3,13 +3,17 @@ local Lexer = require 'lua/lexer'
 local Skeleton = require 'lua/skeleton'
 local Errors = require 'lua/errors'
 local Macros = require 'lua/macros'
+local Compiler = require 'lua/compiler'
 
 local function compile(reader)
   local lexer = Lexer.new(reader)
   local out = {}
+  local compiler = Compiler.compiler()
+
   local errors, _ = Errors.error_scope(function()
     out.skel = parse_skeleton(lexer)
     out.expanded = Macros.macro_expand(out.skel)
+    out.compiled = compiler.compile_item(List.head(out.expanded))
   end)
 
   return errors, out
@@ -31,6 +35,7 @@ local function repl()
     if #errors == 0 then
       print('parsed: ' .. Stubs.inspect_value(out.skel))
       print('expanded: ' .. Stubs.inspect_value(out.expanded))
+      print('compiled: ' .. Stubs.inspect_value(out.compiled))
     else
       for _,e in pairs(errors) do
         print('error: ' .. Stubs.inspect_value(e))

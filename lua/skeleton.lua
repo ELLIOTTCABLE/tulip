@@ -57,7 +57,7 @@ end)
 
 Stubs.impl_inspect_tag('skeleton/item', 2, function(annotations, body)
   local anns_ = List.join(List.map(annotations, inspect_value), '; ')
-  local body_ = List.join(List.map(body, inspect_value), '_')
+  local body_ = List.join(List.map(body, inspect_value), ' ')
   return '(' .. anns_ .. ':' .. body_ .. ':)'
 end)
 

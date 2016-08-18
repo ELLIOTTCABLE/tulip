@@ -133,7 +133,7 @@ function inspect_token(id, value, range)
     raw = name
   end
 
-  return raw .. '@' .. range
+  return raw -- .. '@' .. range
 end
 
 impl_inspect_tag('tok', 3, inspect_token)

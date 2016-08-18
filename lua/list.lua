@@ -88,6 +88,7 @@ local function each_slice(list, pred, fn)
   each(list, function(el)
     if pred(el) then
       fn(reverse(last))
+      last = empty
     else
       last = cons(el, last)
     end
