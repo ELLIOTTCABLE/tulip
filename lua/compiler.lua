@@ -9,10 +9,30 @@ local function compiler()
   local compile_module
 
   local state = {
+    bound_scope = List.empty
+    module_context = List.empty
   }
+
+  local function with_context(name, context, fn)
+    state[name] = List.cons(context, state[name])
+    fn()
+    state[name] = List.tail(state[name])
+    return context
+  end
+
+  local function current_module()
+    return List.head(state.module_context)
+  end
+
+  local function register_names(skels)
+    local names = current_module().names
+
+    jkjk
+  end
 
   function compile_item(item)
     local body = tag_get(item, 1)
+    local module = List.head(state.module_context)
     return compile_expr(body)
   end
 
@@ -25,7 +45,12 @@ local function compiler()
     return compiled_segments
   end
 
-  function compile_module(skels)
+  function compile_module(name, skels)
+    local module = { type = 'module', name = name, members = {}, names = {} }
+    with_context('module_context', module, function()
+      register_names(skels)
+      List.each(skels, compile_item)
+    end)
   end
 
   function compile_segment(segment)

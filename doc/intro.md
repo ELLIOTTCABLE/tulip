@@ -190,16 +190,18 @@ The special pattern `_` acts as usual - it matches any value and binds no result
 I strongly dislike macros that can hide in code.  I get really frustrated when I open a source file and see `(foo ...)` and can't tell whether it's a function or a macro until I read documentation.  For these reasons, extensible literals and macros in tulip are all sigiled with `/`.  Here is a basic macro: the list constructor:
 
 ``` tulip
-/list[1; 2; 3]
+\list[1; 2; 3]
 ```
 
 The implementation syntax for these is still in design phase, but they will take after rust in that they will pattern-match against syntax, and result in new syntax.  I expect `list` to be so common that for that special case it is permitted to leave off the macro name: `/[1; 2; 3]` is equivalent.
 
-Strings are delimited with `'{...}`, which balances curly braces and respects `\{` and `\}`.  But since many string literals are much simpler, you can also use `'` as a one-sided delimiter that scans to whitespace or one of the delimiters `]`, `)`, or `>`.  Here are some examples:
+Strings can be represented with the familiar `"double quote syntax"`, or delimited with `'{...}`, which balances curly braces and respects `\{` and `\}`.  But since many string literals are much simpler, you can also use `'` as a one-sided delimiter that scans to whitespace or one of the delimiters `]`, `)`, or `>`.  Here are some examples:
 
 ``` tulip
-'{foo} # => the string {foo}
-'foo # => the string {foo}
+# all three equivalent:
+"foo"
+'{foo}
+'foo
 ```
 
 For interpolation, use `"{...}` with `$(...)`:
@@ -227,14 +229,12 @@ foo = {
 
 Variables defined in this way are called **let-bound**, as opposed to **argument-bound**.  Let-bound function arguments can pattern match in the same way as lambda arguments.  Multiple definitions of the same function in a sequence of bindings behaves the same as multiple clauses in a lambda.
 
-Tulip supports **let-recursion**: a variable bound in a let-expression (`name = value`) can use itself in its definition.  A sequence of let-expressions can also refer to each other recursively.  This generally works fine when the values defined are all functions, but it can break down when the values use recursive references strictly:
+Tulip supports **let-recursion**: a variable bound in a let-expression (`name = value`) can use itself in its definition, as long as it's wrapped in a lambda or lazy context.  A sequence of let-expressions can also refer to each other recursively.
 
 ``` tulip
 # the lazy y-combinator (.o_o).
-fix f = { x = f x; x }
+fix f = { x = ~(f x); x }
 ```
-
-In this case, tulip will detect the recursion, and the `f x` will be automatically wrapped with a lazy operator (`~`). Any reference loop in a sequence of lets will be closed by converting the last link to a lazy reference.  This makes it simple to create graph-like structures.
 
 Tail call optimization is supported and tail recursion encouraged.
 
@@ -362,7 +362,7 @@ For the root module of a file, the square brackets can be omitted.  A module is 
 @module my-module
 
 @import another-module
-@import yet-another-module
+@import yet-another-module [name-1; name-2]
 ```
 
 A module with parameters is called an **object**:
@@ -373,9 +373,9 @@ A module with parameters is called an **object**:
   move dx dy = Point (add x dx) (add y dy)
 ]
 
-center = Point 0 0 # => *<Point 0 0>
+center = Point 0 0 # => (Point 0 0)
 center/x # => 0
-center/move 2 3 # => *<Point 2 3>
+center/move 2 3 # => (Point 2 3)
 ```
 
 The arguments act as if every member was a function with those arguments curried in.  Here, `Point` is an **object constructor** and `center` is an **object instance**.
@@ -385,9 +385,7 @@ The arguments act as if every member was a function with those arguments curried
 Features coming soon include:
 
 * dynamic variables sigiled with `$`
-* custom binding behavior with infix `|`
 * infixing user functions with <code>\`foo</code>
-* an ffi system to RPython and C
 * macro definition syntax
 * custom `@annotations`, special defs
 
@@ -399,12 +397,14 @@ Still interested?  Follow `@tuliplang` on Twitter for more updates, and come joi
 
 If you're queer/trans, a person of color, and/or a woman, we'd love for you to join the very small team working on this.  We currently need help with:
 
-  * VM implementation (in RPython)
-  * spec writing
+  * VM implementation (in C)
   * example writing
-  * the frontend implementation (parsing, etc)
+  * the frontend implementation (in lua)
+  * the macro system design
   * test infrastructure
   * standard library design.
+
+I could use some help in being able to set aside time to work on tulip - if you like what you see here and want to help make it a reality, you should pledge to the [patreon](https://patreon/jneen)!
 
 <3 <3 <3
 
