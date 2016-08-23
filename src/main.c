@@ -8,35 +8,40 @@
 #include "runtime/transforms.h"
 #include "types/core.h"
 #include "compiler/host.h"
+#include "support/options.h"
 
 int main(int argc, char* argv[]) {
-  tulip_runtime_module testmod = (tulip_runtime_module) {
-    .version         = null_module_version,
-    .status          = TULIP_MODULE_UNCOMPILED,
-    .definitions     = (tulip_runtime_toplevel_definition[]){
-      (tulip_runtime_toplevel_definition) {
-        .name        = "testblock",
-        .definition  = block( (tulip_value[]){
-            apply( builtin("print", 1, (tulip_value[]){}, 0), (tulip_value[]){ literal_string("test") }, 1 )
-        }, 1)
-      }
-    },
-    .num_definitions = 1,
-    .llvm_module     = NULL
-  };
 
-  printf("CORE AST:\n\t");
-  printf("%s\n", show_value(testmod.definitions[0].definition));
+  if (argc == 0) {
 
-  /* tulip_runtime_ast_value* rt_def = convert_tag_tree_to_ast(testmod.definitions[0].definition); */
+    print_options();
 
-  /* printf("RT AST:\n\t"); */
-  /* printf("%s\n", show_ast(rt_def)); */
+  } else {
 
-  /* printf("LLVM IR:\n\t"); */
-  tulip_runtime_state state = tulip_runtime_start();
+    tulip_arguments args = parse_args(argc, argv);
 
-  tulip_runtime_stop(state);
+    if (args.parse_error != NULL) {
+      fprintf(stderr, "%s\n", args.parse_error);
+      return 0;
+    }
 
-  return 0;
+    if (args.mode == main_file) {
+
+      // [todo] instantiate compiler
+
+      tulip_runtime_state state = tulip_runtime_start();
+
+      // [todo] poll main module from compiler
+
+      // [todo] invoke main module
+
+      tulip_runtime_stop(state);
+
+      return 0;
+    } else if (args.mode == repl) {
+
+      // [todo] repl
+
+    }
+  }
 }
