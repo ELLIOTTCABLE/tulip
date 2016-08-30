@@ -13,7 +13,7 @@ local function compile(reader)
   local errors, _ = Errors.error_scope(function()
     out.skel = parse_skeleton(lexer)
     out.expanded = Macros.macro_expand(out.skel)
-    out.compiled = compiler.compile_item(List.head(out.expanded))
+    out.compiled = compiler.compile_expr(List.head(out.expanded))
   end)
 
   return errors, out

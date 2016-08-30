@@ -107,10 +107,38 @@ local function split(list, pred)
   return reverse(out)
 end
 
+function split_once(list, pred)
+  local out = empty
+
+  while is_cons(list) do
+    local h, t = head(list), tail(list)
+    if pred(h) then
+      return reverse(out), list
+    else
+      out = cons(h, out)
+      list = t
+    end
+  end
+
+  return nil, nil
+end
+
 local function size(list)
   local count = 0
   each(list, function(_) count = count + 1 end)
   return count
+end
+
+local function find_map(list, pred)
+  while not is_nil(list) do
+    local out = pred(head(list))
+    if out then return out end
+    list = tail(list)
+  end
+end
+
+local function find(list, pred)
+  return find_map(list, function(e) if pred(e) then return e end end)
 end
 
 Stubs.impl_inspect_tag('nil', 0, function() return '\\list()' end)
@@ -123,6 +151,7 @@ end)
 _G.List = {
   list = list,
   map = map,
+  find_map = find_map,
   reverse = reverse,
   empty = empty,
   head = head,
