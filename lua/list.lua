@@ -23,6 +23,10 @@ local function tail(list)
   return tag_get(list, 1)
 end
 
+local function is_singleton(list)
+  return is_cons(list) and is_nil(tail(list))
+end
+
 local function list(tbl)
   local out = empty
 
@@ -165,6 +169,7 @@ _G.List = {
   size = size,
   foldl = foldl,
   foldr = foldr,
+  is_singleton = is_singleton,
 }
 
 return List

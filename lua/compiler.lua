@@ -1,5 +1,11 @@
+local Errors = require('lua/errors')
+
 local function is_tok(skel, id)
   return matches_tag(skel, 'skeleton/token', 1) and check_tok(tag_get(skel, 0), id)
+end
+
+local function skel_body(skel)
+  return tag_get(skel, 2)
 end
 
 local function is_nest(skel, id)
@@ -7,6 +13,10 @@ local function is_nest(skel, id)
 end
 
 local function nest_body(skel) return tag_get(skel, 2) end
+
+local function error(skel, message)
+  return Errors.error('parse/compiler', skel, message)
+end
 
 local Assign = {}
 local Module = {}
@@ -50,7 +60,7 @@ function Assign.new(_name, _module, _source)
     if List.is_nil(patterns) then
       return body
     else
-      error('todo')
+      return error('todo')
     end
   end
 
@@ -72,6 +82,10 @@ function Expr.new(_module, _source)
   local compile_term
   local compile_segment
 
+  function apply(fn, ...)
+    return tag('apply', fn, List.list({...}))
+  end
+
   function compile_term(skel)
     if is_tok(skel, token_ids.NAME) then
       -- NOTE: name values get checked and fully
@@ -86,21 +100,25 @@ function Expr.new(_module, _source)
     elseif is_tok(skel, token_ids.FLAG) then
       return tag('flag', skel_val(skel))
     elseif is_tok(skel, token_ids.BANG) then
-      error(skel, 'improper `!` in term position')
+      return error(skel, 'improper `!` in term position')
     elseif is_nest(skel, token_ids.LPAREN) then
       return compile_expr(skel_body(skel))
     elseif is_nest(skel, token_ids.LBRACE) then
       return compile_block(skel_body(skel))
     elseif is_nest(skel, token_ids.MACRO) then
-      error(skel, 'unexpanded macro!')
+      return error(skel, 'unexpanded macro!')
     elseif is_nest(skel, token_ids.LBRACK) then
       return compile_lambda(skel_body(skel))
     elseif matches_tag(skel, 'skeleton/item', 2) then
       -- TODO: check annotations here
       return compile_expr(tag_get(skel, 1))
     else
-      error(skel, 'unsupported form')
+      return error(skel, 'unsupported form')
     end
+  end
+
+  function compile_lambda(source)
+    return error('todo')
   end
 
   function compile_segment(is_first, segment)
@@ -114,17 +132,17 @@ function Expr.new(_module, _source)
       local head = List.head(segment)
       if is_tok(head, token_ids.BANG) then
         if #code_segment == 0 then
-          error(head, '`!` must appear only in argument position')
+          return error(head, '`!` must appear only in argument position')
         elseif matches_tag(code_segment[1], 'tag', 1) then
-          error(head, '`!` can\'t be passed to a tag constructor')
+          return error(head, '`!` can\'t be passed to a tag constructor')
         else
-          code_segment[#code_segment] = tag('apply', code_segment[#code_segment],
-                                                     tag('constant', tag('bang')))
+          code_segment[#code_segment] = apply(code_segment[#code_segment],
+                                              tag('constant', tag('bang')))
         end
       elseif is_tok(head, token_ids.FLAGKEY) then
-        error('TODO: flagkeys')
+        return error('TODO: flagkeys')
       elseif is_tok(head, token_ids.DASH) then
-        error('TODO: dash')
+        return error('TODO: dash')
       else
         table.insert(code_segment, compile_term(head))
       end
@@ -137,7 +155,13 @@ function Expr.new(_module, _source)
 
   function compile_expr(expr)
     -- TODO: implement chaining
-    return tag('apply', List.list(compile_segment(false, expr)))
+    local terms = compile_segment(false, expr)
+    if #terms == 1 then
+      return terms[1]
+    else
+      local term_list = List.list(terms)
+      return apply(unpack(terms))
+    end
   end
 
   self.compile = function()

@@ -117,7 +117,9 @@ function _parse_sequence(lexer, open_tok, expected_close_id)
       table.insert(elements, _parse_sequence(lexer, tok, token_ids.GT))
     elseif check_tok(tok, token_ids.LPAREN) then
       table.insert(elements, _parse_sequence(lexer, tok, token_ids.RPAREN))
-    elseif check_tok(tok, token_ids.LBRACK) or check_tok(tok, token_ids.MACRO) then
+    elseif check_tok(tok, token_ids.LBRACK) then
+      table.insert(elements, _parse_sequence(lexer, tok, token_ids.RBRACK))
+    elseif check_tok(tok, token_ids.MACRO) then
       local open = lexer.next()
       if check_tok(open, token_ids.LPAREN) then
         table.insert(elements, _parse_sequence(lexer, tok, token_ids.RPAREN))

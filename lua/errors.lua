@@ -12,8 +12,17 @@ local function error_scope(fn)
   return errors, out
 end
 
+local function any()
+  return #state.errors > 0
+end
+
+local function ok()
+  return (not any())
+end
+
 local function error(error_tag, ...)
-  error_obj = Stubs.tag(error_tag, ...)
+  print('custom error!')
+  error_obj = tag(error_tag, ...)
   table.insert(state.errors, error_obj)
   return error_obj
 end
@@ -21,4 +30,6 @@ end
 return {
   error_scope = error_scope,
   error = error,
+  any = any,
+  ok = ok
 }
