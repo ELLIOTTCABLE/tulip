@@ -15,11 +15,11 @@ test 'mention-doesnt-apply {
 } (.starting .all .now)
 
 test 'apply-with-one-arg-and-optargs {
-  activate-sprinklers .my-sprinkler -when: .later
+  activate-sprinkler .my-sprinkler -when: .later
 } (.starting .my-sprinkler .later)
 
 test 'apply-with-one-arg {
-  activate-sprinklers .my-sprinkler
+  activate-sprinkler .my-sprinkler
 } (.starting .my-sprinkler .now)
 
 # boolean flags
