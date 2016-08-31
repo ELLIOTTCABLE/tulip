@@ -137,7 +137,7 @@ function Expr.new(_module, _source)
 
   function compile_expr(expr)
     -- TODO: implement chaining
-    return tag('apply', unpack(compile_segment(false, expr)))
+    return tag('apply', List.list(compile_segment(false, expr)))
   end
 
   self.compile = function()
