@@ -127,27 +127,30 @@ function Expr.new(_module, _source)
     -- add_dash(is_first, segment)
 
     local code_segment = {}
-    function advance() segment = List.tail(segment) end
+    function yield(thing)
+      table.insert(code_segment, thing)
+    end
+
     while List.is_cons(segment) do
       local head = List.head(segment)
       if is_tok(head, token_ids.BANG) then
         if #code_segment == 0 then
-          return error(head, '`!` must appear only in argument position')
+          yield(error(head, '`!` must appear only in argument position'))
         elseif matches_tag(code_segment[1], 'tag', 1) then
-          return error(head, '`!` can\'t be passed to a tag constructor')
+          yield(error(head, '`!` can\'t be passed to a tag constructor'))
         else
           code_segment[#code_segment] = apply(code_segment[#code_segment],
                                               tag('constant', tag('bang')))
         end
       elseif is_tok(head, token_ids.FLAGKEY) then
-        return error('TODO: flagkeys')
+        yield(error('TODO: flagkeys'))
       elseif is_tok(head, token_ids.DASH) then
-        return error('TODO: dash')
+        yield(error('TODO: dash'))
       else
-        table.insert(code_segment, compile_term(head))
+        yield(compile_term(head))
       end
 
-      advance()
+      segment = List.tail(segment)
     end
 
     return code_segment
@@ -159,7 +162,6 @@ function Expr.new(_module, _source)
     if #terms == 1 then
       return terms[1]
     else
-      local term_list = List.list(terms)
       return apply(unpack(terms))
     end
   end
