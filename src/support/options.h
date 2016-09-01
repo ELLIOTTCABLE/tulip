@@ -19,6 +19,8 @@ typedef struct tulip_arguments {
   const char*  log_file;
   bool         print_help;
   const char*  parse_error;
+  unsigned int program_argc;
+  const char** program_argv;
 } tulip_arguments;
 
 void print_options();

@@ -45,6 +45,8 @@ tulip_arguments parse_args(int argc, char* argv[]) {
   args.heap_size = 2 << 16;
   args.print_help = false;
   args.parse_error = NULL;
+  args.program_argc = 0;
+  args.program_argv = NULL;
   args.mode = none;
 
   int i = 0;
@@ -96,6 +98,13 @@ tulip_arguments parse_args(int argc, char* argv[]) {
       case 'h':
         args.print_help = true;
         i += 1;
+        break;
+
+      case '-':
+        args.program_argc = argc - (i + 1);
+        args.program_argv = malloc(sizeof(char*) * args.program_argc);
+        memcpy(args.program_argv, argv[i+1], sizeof(char*) * args.program_argc);
+        i = argc;
         break;
 
       default:
