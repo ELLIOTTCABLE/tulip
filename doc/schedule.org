@@ -1,37 +1,50 @@
-* schedule
-** TODO [2016-03-31 Thu] architecture
-*** DONE makefiles
-CLOSED: [2016-03-24 Thu 04:27]
-just a simple toplevel makefile should work fine
-*** TODO :compiler: file interface
-*** DONE :types: value representations
-CLOSED: [2016-03-24 Thu 04:27]
-*** DONE :types: less awkward tag implementation
-CLOSED: [2016-03-24 Thu 04:27]
-*** DONE :types: tulip-core specification
-CLOSED: [2016-03-24 Thu 04:27]
-** TODO [2016-04-30 Sat] compiler in progress
-*** TODO :compiler: static dependency loading
-compiler needs to return multiple asts, separate by module
-*** DONE :types: tulip-core validation
-CLOSED: [2016-04-14 Thu 00:32]
-*** DONE :runtime: mcjit lifetime
-CLOSED: [2016-04-20 Wed 19:04]
-*** TODO :runtime: generate initial symbol vectors from ast
-naively loads all of them
-*** TODO :runtime: first transform set
-- [ ] tulip types
-- [ ] lambdas, application
-- [ ] blocks
-  + closure tables (??)
-- [ ] branches
-  + llvm should handle collapsing
-  + phi resolution in blocks
-** TODO [2016-05-31 Tue] compiler working
-** TODO [2016-06-30 Thu] standard library in progress
-** TODO [2016-07-31 Sun] standard library working
-** TODO [2016-08-31 Wed] bulbs, docs, interactive widgets (?)
-** TODO [2016-09-30 Fri] strangeloop presentation and first release
+* remaining work for beta
+** TODO multiple invokations for repl
+** DONE region-based allocators for tulip values
+CLOSED: [2016-08-27 Sat 13:23]
+*** DONE preallocation of the region
+CLOSED: [2016-08-18 Thu 15:58]
+*** DONE commandline param for heap size
+CLOSED: [2016-08-22 Mon 18:11]
+*** DONE struct to track usage metadata
+CLOSED: [2016-08-18 Thu 15:58]
+*** simple collector
+** DONE region-based allocators for modules
+CLOSED: [2016-08-27 Sat 13:26]
+*** DONE region
+CLOSED: [2016-08-18 Thu 15:58]
+*** TODO querying modules by name and/or version
+** DONE scope table, definition for a single process
+CLOSED: [2016-08-18 Thu 17:14]
+*** DONE change tulip value metadata when things fall out of scopes
+CLOSED: [2016-08-22 Mon 15:28]
+** DONE closures
+CLOSED: [2016-08-27 Sat 13:23]
+*** TODO branch semantics
+*** TODO definitions for runtime closure creation
+** DONE concrete forms of values
+   CLOSED: [2016-08-30 Tue 14:09]
+*** DONE generate llvm names qualified by module and module version
+CLOSED: [2016-08-27 Sat 13:27]
+*** DONE values in definitions
+    CLOSED: [2016-08-30 Tue 14:09]
+*** DONE values in calls
+    CLOSED: [2016-08-30 Tue 14:09]
+*** TODO definitions for runtime constructors
+** TODO concrete forms of control-flow semantics
+*** TODO reordering for eager eval
+** TODO partial application
+*** TODO wrapper functions to generate closures
+** DONE name reference between modules
+CLOSED: [2016-08-27 Sat 13:25]
+see: notes/cross module calls
+*** DONE gen declarations for qualified names
+CLOSED: [2016-08-27 Sat 13:25]
+*** DONE see if llvm metadata can express "private" members of a module
+CLOSED: [2016-08-18 Thu 17:16]
+linkage type `private`
+*** TODO perform module linking before function invocation
+*** TODO error handling for linking failures
 * architecture
 ** interface
 *** file reader
@@ -91,3 +104,6 @@ ast -> ssa alchemy
 ***** ???
 it is a mystery
 * notes
+** cross-module calls
+when compiled, a tulip module needs to include declarations of any functions it uses in other modules
+declaration stubs should only be generated when an actual callsite is encountered

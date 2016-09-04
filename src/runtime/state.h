@@ -10,25 +10,29 @@
 #include <llvm-c/Core.h>
 #include <llvm-c/ExecutionEngine.h>
 
-#include "runtime/modules.h"
+#include "runtime/regions.h"
+#include "runtime/processes.h"
 
-typedef struct tulip_runtime_allocator {
-  void*  region;
-  size_t width;
-  int    length;
-} tulip_runtime_allocator;
+typedef enum {
+  runtime_initialized,
+  runtime_busy,
+  runtime_paused
+} tulip_runtime_status;
+
+typedef struct tulip_runtime_options {
+  unsigned int heap_size;
+  unsigned int module_limit;
+} tulip_runtime_options;
 
 typedef struct tulip_runtime_state {
-  tulip_runtime_allocator allocator;
-  tulip_runtime_module*   modules;
-  int                     num_modules;
-  LLVMExecutionEngineRef  jit_instance;
+  value_region*          values;
+  module_region*         modules;
+  module_ref             main_module;
+  tulip_runtime_process  proc; // [note] there is currently only one process at a time
+  tulip_runtime_status   status;
+  LLVMExecutionEngineRef jit_instance;
 
 } tulip_runtime_state;
-
-bool tulip_allocator_new(int length);
-bool tulip_allocator_alloc();
-bool tulip_allocator_free();
 
 tulip_runtime_state tulip_runtime_start();
 void tulip_runtime_stop(tulip_runtime_state rt);

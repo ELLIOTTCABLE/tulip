@@ -11,10 +11,13 @@
 
 #include "types/value.h"
 
+// [todo] [urgent] work out this ridiculous import cycle
+struct tulip_runtime_scope;
+struct runtime_native_defs;
+
 typedef struct {
   char* llvm_function_name;
-  LLVMTypeRef llvm_function_type;
-  LLVMValueRef llvm_entry_point; // points to a function
+  LLVMValueRef llvm_entry_point;
 } tulip_runtime_toplevel_definition_compiled;
 
 typedef struct {
@@ -34,18 +37,23 @@ const tulip_runtime_module_version null_module_version;
 typedef enum {
   TULIP_MODULE_EMPTY,
   TULIP_MODULE_UNCOMPILED,
-  TULIP_MODULE_COMPILED,
-  TULIP_MODULE_MODIFIED
+  TULIP_MODULE_TRANSFORMED,
+  TULIP_MODULE_COMPILED
 } tulip_runtime_module_status;
 
-// [care] modules will need to be managed by the process collector, and should not be allocated on their own
 typedef struct {
   char* name;
+  char** path;
+  unsigned int path_len;
   tulip_runtime_module_version version;
   tulip_runtime_module_status status;
   tulip_runtime_toplevel_definition* definitions;
-  int num_definitions;
+  unsigned int num_definitions;
   LLVMModuleRef llvm_module;
+  struct tulip_runtime_scope* module_scope;
+  struct runtime_native_defs* native_defs; // [note] every module should contain its own native header
+                                           //        it's a little wasteful, but it allows llvm to inline the foreign calls
 } tulip_runtime_module;
 
-const tulip_runtime_module main_module;
+void module_insert_definition(tulip_runtime_module* mod, tulip_runtime_toplevel_definition def);
+bool module_contains_definition_named(const char* name);

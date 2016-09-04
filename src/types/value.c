@@ -16,19 +16,23 @@
 // builders
 
 tulip_value build_string(char* s) {
-  return (tulip_value) { .type = TULIP_VALUE_LITERAL
-                       , .literal = (tulip_literal) { .type = TULIP_LITERAL_STRING
-                                                    , .string = s
-                                                    }
-                       };
+  return (tulip_value) {
+    .type = TULIP_VALUE_LITERAL,
+      .literal = (tulip_literal) {
+      .type = TULIP_LITERAL_STRING,
+      .string = s
+    }
+  };
 }
 
 tulip_value build_number(double n) {
-  return (tulip_value) { .type = TULIP_VALUE_LITERAL
-                       , .literal = (tulip_literal) { .type = TULIP_LITERAL_NUMBER
-                                                    , .number = n
-                                                    }
-                       };
+  return (tulip_value) {
+    .type = TULIP_VALUE_LITERAL,
+    .literal = (tulip_literal) {
+      .type = TULIP_LITERAL_NUMBER,
+      .number = n
+    }
+  };
 }
 
 tulip_value build_discrete(long n) {
@@ -45,12 +49,14 @@ tulip_value build_tag(char* name, unsigned int length, tulip_value contents[]) {
 
   if (contents != NULL) memcpy(c, contents, sizeof(tulip_value) * length);
 
-  return (tulip_value) { .type = TULIP_VALUE_TAG
-                       , .tag = (tulip_tag) { .name = name
-                                            , .length = length
-                                            , .contents = c
-                                            }
-                       };
+  return (tulip_value) {
+    .type = TULIP_VALUE_TAG,
+    .tag = (tulip_tag) {
+      .name = name,
+      .length = length,
+      .contents = c
+    }
+  };
 }
 
 tulip_tag* append_tag(tulip_tag* t, tulip_value v) {
@@ -70,6 +76,9 @@ tulip_tag* append_tag(tulip_tag* t, tulip_value v) {
 
   return t;
 }
+
+void free_tag(tulip_tag* t){}
+void free_tulip_value(tulip_value* v){}
 
 ////////////////////////////////////////////////////////////////////////////////
 // validators
@@ -117,6 +126,6 @@ char* show_value(tulip_value v) {
       return str;
     }
   } else {
-    return "you can't print this silly";
+    return "value cannot currently be inspected";
   }
 }

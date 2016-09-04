@@ -101,33 +101,36 @@ bool validate_literal(tulip_value subject) {
 // x
 // .name "x"
 tulip_value name(char** modulePath, unsigned int modulePathLen, char* identifier) {
+  tulip_value modp = build_tag("nil", 0, NULL);
 
-  tulip_value strs[modulePathLen];
+  if (modulePathLen > 0) {
+    tulip_value strs[modulePathLen];
 
-  for (unsigned int i = 0; i < modulePathLen; i++) {
-    strs[i] = literal_string(modulePath[i]);
+    for (unsigned int i = 0; i < modulePathLen; i++) {
+      strs[i] = literal_string(modulePath[i]);
+    }
+
+    modp = cons(strs, modulePathLen);
   }
-
-  tulip_value modp = cons(strs, modulePathLen);
 
   return build_tag("name", 2, (tulip_value[]){modp, build_string(identifier)});
 }
 
-bool validate_name(tulip_value subject) {
-  // not actually a name
-  if (!strcmp(subject.tag.name, "name"))
-    return false;
+/* bool validate_name(tulip_value subject) { */
+/*   // not actually a name */
+/*   if (!strcmp(subject.tag.name, "name")) */
+/*     return false; */
 
-  // name is somehow not a string
-  if (subject.tag.contents[0].type == TULIP_VALUE_LITERAL && subject.tag.contents[0].literal.type == TULIP_LITERAL_STRING)
-    return false;
+/*   // name is somehow not a string */
+/*   if (subject.tag.contents[0].type == TULIP_VALUE_LITERAL && subject.tag.contents[0].literal.type == TULIP_LITERAL_STRING) */
+/*     return false; */
 
-  // name is null
-  if (subject.tag.contents[0].literal.string == NULL)
-    return false;
+/*   // name is null */
+/*   if (subject.tag.contents[0].literal.string == NULL) */
+/*     return false; */
 
-  return true;
-}
+/*   return true; */
+/* } */
 
 tulip_value tag(char* name, unsigned int length, tulip_value arguments[]){
   return build_tag("tag", 2, (tulip_value[]){build_string(name), cons(arguments, length)});

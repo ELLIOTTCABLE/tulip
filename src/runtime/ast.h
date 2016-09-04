@@ -4,6 +4,7 @@
 
 #include "types/core.h"
 #include "types/value.h"
+#include "runtime/modules.h"
 
 typedef enum {
   ast_block,
@@ -21,16 +22,19 @@ typedef struct tulip_runtime_ast_value tulip_runtime_ast_value;
 
 typedef struct tulip_runtime_ast_name {
   char** modulePath;
+  unsigned int modulePathLen;
   char*  name;
 } tulip_runtime_ast_name;
 
 typedef struct tulip_runtime_ast_literal {
   enum {
     ast_literal_string,
-    ast_literal_number
+    ast_literal_int,
+    ast_literal_float
   } type;
   union {
-    double number;
+    long long integral;
+    double fractional;
     char* string;
   };
 } tulip_runtime_ast_literal;
@@ -70,7 +74,7 @@ typedef struct tulip_runtime_ast_builtin {
 } tulip_runtime_ast_builtin;
 
 typedef struct tulip_runtime_ast_tag {
-  tulip_runtime_ast_name    tag_name;
+  char*                     tag_name;
   unsigned int              contents_length;
   tulip_runtime_ast_value** contents;
 } tulip_runtime_ast_tag;
@@ -91,4 +95,6 @@ typedef struct tulip_runtime_ast_value {
 } tulip_runtime_ast_value;
 
 tulip_runtime_ast_value* convert_tag_to_ast_value(tulip_value t);
+void                     destroy_art_value(tulip_runtime_ast_value* v);
 char*                    show_ast(tulip_runtime_ast_value* ast);
+char*                    render_qualified_name(tulip_runtime_ast_name name, tulip_runtime_module* context);

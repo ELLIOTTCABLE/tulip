@@ -54,7 +54,7 @@ tulip_runtime_ast_value* convert_tag_to_ast_value(tulip_value t) {
 
     if (bind_v->type != ast_literal || bind_v->literal.type != ast_literal_string) {} // [todo] failure case
 
-    tulip_runtime_ast_name bind = bind_v->literal.string;
+    tulip_runtime_ast_name bind = (tulip_runtime_ast_name){NULL, 0, bind_v->literal.string};
 
     tulip_runtime_ast_value* lambda = malloc(sizeof(tulip_runtime_ast_value));
     lambda->type = ast_lambda;
@@ -69,7 +69,7 @@ tulip_runtime_ast_value* convert_tag_to_ast_value(tulip_value t) {
 
     if (bind_v->type != ast_literal || bind_v->literal.type != ast_literal_string) {} // [todo] failure case
 
-    tulip_runtime_ast_name bind = bind_v->literal.string;
+    tulip_runtime_ast_name bind = (tulip_runtime_ast_name){NULL, 0, bind_v->literal.string};
 
     tulip_runtime_ast_value* lambda = malloc(sizeof(tulip_runtime_ast_value));
     lambda->type = ast_let;
@@ -136,10 +136,25 @@ tulip_runtime_ast_value* convert_tag_to_ast_value(tulip_value t) {
     return literal;
 
   } else if (strcmp(tag.name, "name") == 0) {
-
+    unsigned int length = cons_length(tag.contents[0]);
     tulip_runtime_ast_value* name = malloc(sizeof(tulip_runtime_ast_value));
+
     name->type = ast_name;
-    name->name = (tulip_runtime_ast_name){tag.contents[0].literal.string};
+    if (length > 0) {
+      name->name = (tulip_runtime_ast_name){NULL, 0, tag.contents[1].literal.string};
+    } else {
+      tulip_value* contents = uncons(tag.contents[9]);
+      char* strs[length];
+      tulip_value v;
+
+      for (unsigned int i = 0; i < length; i++) {
+        v = contents[i];
+        if (v.type == TULIP_VALUE_LITERAL && v.literal.type == TULIP_LITERAL_STRING)
+          strs[i] = v.literal.string;
+      }
+
+      name->name = (tulip_runtime_ast_name){strs, length, tag.contents[1].literal.string};
+    }
 
     return name;
 
@@ -149,7 +164,96 @@ tulip_runtime_ast_value* convert_tag_to_ast_value(tulip_value t) {
 }
 
 void destroy_ast_value(tulip_runtime_ast_value* v){
-  // [todo] recursively free ast
+
+  switch (v->type) {
+
+  case ast_name:
+    // [note] does a char* need to be freed?
+    // free(v->name.name);
+    // for (unsigned int i = 0; i < v->name.modulePathLen; i++) { free(v->name.modulePath[i]); }
+    free(v->name.modulePath);
+    break;
+
+  case ast_literal:
+    // if (v->literal.type == ast_literal_string) free(v->literal.string);
+    break;
+
+  case ast_block:
+    for (unsigned int i = 0; i < v->block.length; i++) {
+      destroy_ast_value(v->block.statements[i]);
+    }
+    free(v->block.statements);
+    break;
+
+  case ast_let:
+    destroy_ast_value(v->let.definition);
+    break;
+
+  case ast_apply:
+    destroy_ast_value(v->apply.call);
+    for (unsigned int i = 0; i < v->apply.saturation; i++) {
+      destroy_ast_value(v->apply.arguments[i]);
+    }
+    free(v->apply.arguments);
+    break;
+
+  case ast_lambda:
+    destroy_ast_value(v->lambda.expression);
+    break;
+
+  case ast_branch:
+    for (unsigned int i = 0; i < v->branch.length; i++) {
+      destroy_ast_value(v->branch.predicates[i]);
+      destroy_ast_value(v->branch.consequences[i]);
+    }
+    free(v->branch.predicates);
+    free(v->branch.consequences);
+    break;
+
+  case ast_builtin:
+    for (unsigned int i = 0; i < v->builtin.saturation; i++) {
+      destroy_ast_value(v->builtin.arguments[i]);
+    }
+    free(v->builtin.arguments);
+    break;
+
+  case ast_tag:
+    for (unsigned int i = 0; i < v->tag.contents_length; i++) {
+      destroy_ast_value(v->tag.contents[i]);
+    }
+    free(v->tag.contents);
+    break;
+  }
+
+  free(v);
 }
 
 char* show_ast(tulip_runtime_ast_value* ast) {}
+
+char* render_qualified_name(tulip_runtime_ast_name name, tulip_runtime_module* context) {
+  char* rendered_path;
+
+  if (name.modulePathLen == 0) {
+
+    // qualify to local module
+
+    for (unsigned int i = 0; i < context->path_len; i++) {
+      rendered_path = strcat(rendered_path, context->path[i]);
+      rendered_path = strcat(rendered_path, "_");
+    }
+
+    rendered_path = strcat(rendered_path, context->name);
+    rendered_path = strcat(rendered_path, "_");
+
+  } else {
+
+    // qualify to foreign module
+
+    for (unsigned int i = 0; i < name.modulePathLen; i++) {
+      rendered_path = strcat(rendered_path, name.modulePath[i]);
+      rendered_path = strcat(rendered_path, "_");
+    }
+  }
+
+  return strcat(rendered_path, name.name);
+}
