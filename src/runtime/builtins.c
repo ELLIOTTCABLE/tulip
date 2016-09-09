@@ -91,7 +91,7 @@ tulip_runtime_toplevel_definition runtime_wrap_builtin(char* fn_name, unsigned i
 }
 
 void runtime_create_builtins_binding (tulip_runtime_module* mod, tulip_runtime_state* state) {
-  LLVMValueRef print = LLVMAddFunction(mod->llvm_module, "builtins_print", tulip_fn_type);
+  LLVMValueRef print = LLVMAddFunction(mod->llvm_module, "builtins_print", tulip_defn_type);
   LLVMAddGlobalMapping(state->jit_instance, print, &builtin_print);
   module_insert_definition(mod, runtime_wrap_builtin("print", 5, 1));
 }
@@ -114,5 +114,5 @@ tulip_runtime_module* runtime_create_builtins_module(tulip_runtime_state* state)
 }
 
 runtime_native_defs runtime_create_native_decls(tulip_runtime_module* mod) {
-  LLVMAddFunction(mod->llvm_module, "native_build_tag", tulip_fn_type);
+  LLVMAddFunction(mod->llvm_module, "native_build_tag", tulip_defn_type);
 }
