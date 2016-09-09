@@ -49,7 +49,7 @@ tulip_arguments parse_args(int argc, char* argv[]) {
   args.program_argv = NULL;
   args.mode = none;
 
-  int i = 0;
+  int i = 1;
   while (i < argc) {
 
     if (argv[i][0] == '-' && argv[i][1] == '-') {
@@ -126,7 +126,10 @@ tulip_arguments parse_args(int argc, char* argv[]) {
 
         i += 1;
 
+      } else {
+        break;
       }
+
     }
   }
 
