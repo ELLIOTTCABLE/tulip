@@ -14,7 +14,6 @@ tulip_runtime_state tulip_runtime_start(tulip_runtime_options o) {
   tulip_runtime_state state;
 
   state.modules = init_module_region(o.module_limit);
-  module_ref main = region_insert_module(state.modules, main_module);
 
   // [beta] there is only one heap region, and it is attached to the runtime state
   //        in the future, there may be individual regions per process, but the collection strategy hasn't been decided yet
