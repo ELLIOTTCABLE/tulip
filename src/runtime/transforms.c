@@ -20,17 +20,17 @@ LLVMValueRef tulip_runtime_transform_core(tulip_runtime_module* mod, char* name,
   case ast_tag:
     return tulip_runtime_transform_tag(mod, name, ast->tag, ctx);
   case ast_apply:
-    return tulip_runtime_transform_apply(mod, ast->apply, ctx);
+    return tulip_runtime_transform_apply(mod, name, ast->apply, ctx);
   case ast_block:
     return tulip_runtime_transform_block(mod, name, ast->block, ctx);
   case ast_lambda:
-    return tulip_runtime_transform_lambda(mod, ast->lambda, ctx);
+    return tulip_runtime_transform_lambda(mod, name, ast->lambda, ctx);
   case ast_let:
-    return tulip_runtime_transform_let(mod, ast->let, ctx);
+    return tulip_runtime_transform_let(mod, name, ast->let, ctx);
   case ast_branch:
-    return tulip_runtime_transform_branch(mod, ast->branch, ctx);
+    return tulip_runtime_transform_branch(mod, name, ast->branch, ctx);
   case ast_builtin:
-    return tulip_runtime_transform_builtin(mod, ast->builtin, ctx);
+    return tulip_runtime_transform_builtin(mod, name, ast->builtin, ctx);
   }
 }
 
