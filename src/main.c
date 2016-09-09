@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 
     if (args.parse_error != NULL) {
       fprintf(stderr, "%s\n", args.parse_error);
-      return 0;
+      return 1;
     }
 
     if (args.mode == main_file) {
