@@ -109,10 +109,11 @@ tulip_runtime_ast_value* convert_tag_to_ast_value(tulip_value t) {
     call_v = convert_tag_to_ast_value(tag.contents[0]);
     arity_v = convert_tag_to_ast_value(tag.contents[1]);
 
-    if (call_v->type != ast_name || arity_v->type != ast_literal || arity_v->literal.type != ast_literal_number) {} // [todo] failure case
+    // [jneen] update for int/float distinction
+    // if (call_v->type != ast_name || arity_v->type != ast_literal || arity_v->literal.type != ast_literal_number) {} // [todo] failure case
 
     call = call_v->name;
-    arity = arity_v->literal.number;
+    arity = arity_v->literal.integral;
 
     for (unsigned int i = 0; i < length; i++) {
       arguments[i] = convert_tag_to_ast_value(contents[i]);
@@ -131,7 +132,9 @@ tulip_runtime_ast_value* convert_tag_to_ast_value(tulip_value t) {
     if (tag.contents[0].literal.type == TULIP_LITERAL_STRING)
       literal->literal = (tulip_runtime_ast_literal){ .type = ast_literal_string, .string = tag.contents[0].literal.string };
     if (tag.contents[0].literal.type == TULIP_LITERAL_NUMBER)
-      literal->literal = (tulip_runtime_ast_literal){ .type = ast_literal_number, .number = tag.contents[0].literal.number };
+      literal->literal = (tulip_runtime_ast_literal){ .type = ast_literal_float, .fractional = tag.contents[0].literal.number };
+    if (tag.contents[0].literal.type == TULIP_LITERAL_DISCRETE)
+      literal->literal = (tulip_runtime_ast_literal){ .type = ast_literal_int, .integral = tag.contents[0].literal.discrete };
 
     return literal;
 
