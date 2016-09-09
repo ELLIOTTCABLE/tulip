@@ -144,12 +144,20 @@ tulip_arguments parse_args(int argc, char* argv[]) {
   }
 
   if(access(args.main_file, F_OK)) {
-    args.parse_error = strcat("[ERROR-MISCONFIGURED] Could not find main module at ", args.main_file);
+    char* error_message = alloca(1000 * sizeof(char));
+    snprintf(error_message, 1000 * sizeof(char), "[ERROR-MISCONFIGURED] Could not find main module at %s", args.main_file);
+    args.parse_error = error_message;
     return args;
   }
 
+  if (args.log_file == NULL) {
+    args.log_file = "./tmp/log";
+  }
+
   if(open(args.log_file, O_CREAT | O_APPEND) == -1) {
-    args.parse_error = strcat("[ERROR-MISCONFIGURED] Could not open logfile ", args.log_file);
+    char* error_message = alloca(1000 * sizeof(char));
+    snprintf(error_message, 1000 * sizeof(char), "[ERROR-MISCONFIGURED] Could not open logfile %s", args.log_file);
+    args.parse_error = error_message;
     return args;
   }
 
