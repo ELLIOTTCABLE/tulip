@@ -116,21 +116,22 @@ tulip_value name(char** modulePath, unsigned int modulePathLen, char* identifier
   return build_tag("name", 2, (tulip_value[]){modp, build_string(identifier)});
 }
 
-/* bool validate_name(tulip_value subject) { */
-/*   // not actually a name */
-/*   if (!strcmp(subject.tag.name, "name")) */
-/*     return false; */
+// TODO [sig] validate that this is correct
+bool validate_name(tulip_value subject) {
+  // not actually a name
+  if (!strcmp(subject.tag.name, "name"))
+    return false;
 
-/*   // name is somehow not a string */
-/*   if (subject.tag.contents[0].type == TULIP_VALUE_LITERAL && subject.tag.contents[0].literal.type == TULIP_LITERAL_STRING) */
-/*     return false; */
+  // name is somehow not a string
+  if (subject.tag.contents[0].type == TULIP_VALUE_LITERAL && subject.tag.contents[0].literal.type == TULIP_LITERAL_STRING)
+    return false;
 
-/*   // name is null */
-/*   if (subject.tag.contents[0].literal.string == NULL) */
-/*     return false; */
+  // name is null
+  if (subject.tag.contents[0].literal.string == NULL)
+    return false;
 
-/*   return true; */
-/* } */
+  return true;
+}
 
 tulip_value tag(char* name, unsigned int length, tulip_value arguments[]){
   return build_tag("tag", 2, (tulip_value[]){build_string(name), cons(arguments, length)});
