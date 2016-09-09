@@ -1,5 +1,5 @@
 cflags = --std=c11 -Isrc/ -g -lm -gdwarf-2 -g3 -lLLVM -l"lua5.2"
-libs   = ./src/*/*.c
+libs   = $(shell find src -name '*.c')
 main   = ./src/main.c
 
 BINARY = ./build/tulip
