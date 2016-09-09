@@ -74,7 +74,6 @@ char char_reader_next(char_reader_state* state) {
 
 int Lchar_reader_next(lua_State* s) {
   char_reader_state* state = lua_topointer(s, 1);
-  char b[] = "\0";
 
   char out = char_reader_next(state);
 
