@@ -1,0 +1,18 @@
+[ .foo (.bar x) (.baz y) ? zot x y => add x y
+  _ => default-case! ]
+
+# compiles to...
+
+[ #arg =>
+  (pattern-cases
+    (pattern-block
+      (pattern-assert (matches-tag 'foo 2 #arg))
+      #destruct-1 = tag-get #arg 0
+      #destruct-2 = tag-get #arg 1
+      (pattern-assert (matches-tag 'bar 1 #destruct-1))
+      x = tag-get 0 #destruct-1
+      (pattern-assert (matches-tag 'baz 1 #destruct-2))
+      (pattern-assert (zot x y))
+      y = tag-get 0 #destruct-2) => (add x y)
+    (pattern-block
+      (pattern-asssert .t)) => default-case!) ]
