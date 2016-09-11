@@ -1,6 +1,7 @@
 #include "runtime/builtins.h"
 
 #include <alloca.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -15,8 +16,6 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 // builtin functions
-// builtins that are placed in the builtin prelude module are named builtin_*
-// builtins that are placed in front of every module are named native_*
 // should probably be moved somewhere else
 
 // these are externed to guarantee they'll be available in the jitted code's address space
@@ -24,18 +23,82 @@
 
 extern void builtin_print(tulip_runtime_value* s) {}
 
-// native constructors
-extern value_ref native_build_tag(const char* tag, unsigned int length, LLVMValueRef* contents) {
+////////////////////////////////////////////////////////////////////////////////
+// native functions
+// wrappers for these functions are placed in every tulip module
+// they will eventually be rewritten as llvm transforms
 
+// [todo] thread region pointer to these native calls
+//        the best way to do this may actually just be a global var
+
+// runtime value constructors
+extern value_ref native_build_tag(const char* tag, unsigned int length, value_ref* contents) {
+  tulip_runtime_value v;
+  v.type = tulip_value_tag;
+  v.tag = (tulip_runtime_tag){tag, length, contents};
+
+  return region_insert_value(NULL, v);
 }
-extern value_ref native_build_string() {}
-extern value_ref native_build_int() {}
-extern value_ref native_build_float() {}
-extern value_ref native_build_closure() {}
-extern value_ref native_build_fnptr() {}
+
+extern value_ref native_build_string(const char* value) {
+  tulip_runtime_value v = {.type = tulip_value_string, .string = (tulip_runtime_string) {strlen(value), value}};
+
+  return region_insert_value(NULL, v);
+}
+
+extern value_ref native_build_int(long long value) {
+  tulip_runtime_value v = {.type = tulip_value_integral, .integral = (tulip_runtime_integral){value}};
+
+  return region_insert_value(NULL, v);
+}
+
+extern value_ref native_build_float(double value) {
+  tulip_runtime_value v = {.type = tulip_value_fractional, .fractional = (tulip_runtime_fractional){value}};
+
+  return region_insert_value(NULL, v);
+}
+
+// constructs a closure with an empty scope
+extern value_ref native_build_closure(value_ref fn) {
+  // [todo] thread scope parent
+  // [note] be careful about lexical scoping rules here
+  tulip_runtime_scope* s = scope_init(NULL);
+  tulip_runtime_value v;
+  v.type = tulip_value_closure;
+  v.closure = (tulip_runtime_closure){s, fn};
+
+  // [todo] see above
+  return region_insert_value(NULL, v);
+}
+
+extern value_ref native_build_fnptr(void* fn) {
+  tulip_runtime_fnptr fnptr = (tulip_runtime_fnptr) fn;
+  tulip_runtime_value v;
+  v.type = tulip_value_fnptr;
+  v.fnptr = fnptr;
+
+  return region_insert_value(NULL, v);
+}
 
 // native value inspection
-extern char* native_inspect_type(tulip_runtime_value* v) {}
+extern char* native_inspect_type(value_ref v) {
+  tulip_runtime_value* val = region_get_value(NULL, v);
+
+  switch (val->type) {
+  case tulip_value_tag:
+    return "tag";
+  case tulip_value_string:
+    return "string";
+  case tulip_value_integral:
+    return "integral";
+  case tulip_value_fractional:
+    return "fractional";
+  case tulip_value_closure:
+    return "closure";
+  case tulip_value_fnptr:
+    return "fnptr";
+  }
+}
 
 extern value_ref native_local_scope_lookup(void* scope, const char* name) {
   tulip_runtime_scope* s = (tulip_runtime_scope*) scope;
@@ -45,7 +108,7 @@ extern value_ref native_local_scope_lookup(void* scope, const char* name) {
   if (ret) {
     return ret;
   } else {
-    // [todo] crash process
+    assert(false);
     return (value_ref) NULL;
   }
 }
@@ -59,13 +122,28 @@ extern void native_local_scope_set(void* scope, const char* name, void* value) {
   return;
 }
 
+extern bool native_test_boolean(value_ref v) {
+  tulip_runtime_value* val = region_get_value(NULL, v);
+  switch (val->type) {
+  case tulip_value_tag:
+    if (strcmp(val->tag.name, "t") == 0) {
+      return true;
+    } else if (strcmp(val->tag.name, "f") == 0) {
+      return false;
+    }
+  default:
+    // [todo] crash process gracefully
+    assert(false);
+    break;
+  }
+}
+
 // native destructors
-extern void native_free_tag(tulip_runtime_value* v) {}
-extern void native_free_string(tulip_runtime_value* v) {}
-extern void native_free_int(tulip_runtime_value* v) {}
-extern void native_free_float(tulip_runtime_value* v) {}
-extern void native_free_closure(tulip_runtime_value* v) {}
-extern void native_free_fnptr(tulip_runtime_value* v) {}
+extern void native_free_value(int value) {
+  value_ref v = (value_ref) value;
+
+  region_delete_value(NULL, v);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // builtin utilities
@@ -76,17 +154,24 @@ tulip_runtime_toplevel_definition runtime_wrap_builtin(char* fn_name, unsigned i
 
   char* builtin_name = alloca(sizeof(char) * (name_length + 8));
   strcpy(builtin_name, "builtin_");
-  strcat(builtin_name, fn_name); // [note] strcat may not behave well
+  strcat(builtin_name, fn_name); // [note] strcat may not behave well here
 
   tulip_value bottom = builtin(builtin_name, arity, (tulip_value[]){}, 0);
 
   tulip_value* cur = &bottom;
+
   for (unsigned int i = 0; i < arity; i++) {
+
     tulip_value prev = *cur;
+
     char* param_name = (char[]){'p', i + 48};
+
     names[i] = name(NULL, 0, param_name);
+
     tulip_value next = lambda(names[i], prev);
+
     cur = &next;
+
   }
 
   return (tulip_runtime_toplevel_definition) { name, *cur, NULL };
@@ -100,6 +185,7 @@ void runtime_create_builtins_binding (tulip_runtime_module* mod, tulip_runtime_s
 }
 
 tulip_runtime_module* runtime_create_builtins_module(tulip_runtime_state* state) {
+
   tulip_runtime_module* tulip_mod = malloc(sizeof(tulip_runtime_module));
   tulip_mod->name = "builtins";
   tulip_mod->path_len = 1;
@@ -116,6 +202,14 @@ tulip_runtime_module* runtime_create_builtins_module(tulip_runtime_state* state)
   return tulip_mod;
 }
 
-runtime_native_defs runtime_create_native_decls(tulip_runtime_module* mod) {
-  LLVMAddFunction(mod->llvm_module, "native_build_tag", tulip_defn_type);
+runtime_native_defs runtime_create_native_decls(tulip_runtime_module* mod, tulip_runtime_state* state) {
+  // [todo] add wrappers to native functions to thread the state->values and mod->module_scope pointers
+  runtime_native_defs defs;
+
+  defs.build_tag = LLVMAddFunction(mod->llvm_module, "native_build_tag", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]) { LLVMPointerType(LLVMInt8Type(), 0), LLVMInt64Type(), LLVMPointerType(tulip_value_type, 0)}, 3, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.build_tag, &native_build_tag);
+
+  defs.build
+
+  return defs;
 }

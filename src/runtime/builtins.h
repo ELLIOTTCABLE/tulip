@@ -8,10 +8,6 @@
 #include <runtime/modules.h>
 #include <runtime/state.h>
 
-tulip_runtime_toplevel_definition runtime_wrap_builtin(char* fn_name, unsigned int name_length, unsigned int arity);
-
-LLVMModuleRef runtime_create_builtins();
-
 typedef struct runtime_native_defs {
   LLVMValueRef build_tag;
   LLVMValueRef build_string;
@@ -24,12 +20,10 @@ typedef struct runtime_native_defs {
   LLVMValueRef local_scope_lookup;
   LLVMValueRef local_scope_set;
 
-  LLVMValueRef free_tag;
-  LLVMValueRef free_string;
-  LLVMValueRef free_int;
-  LLVMValueRef free_float;
-  LLVMValueRef free_closure;
-  LLVMValueRef free_fnptr;
+  LLVMValueRef test_boolean;
+
+  LLVMValueRef free_value;
 } runtime_native_defs;
 
-runtime_native_defs runtime_create_native_decls(tulip_runtime_module* mod);
+runtime_native_defs runtime_create_native_decls(tulip_runtime_module* mod, tulip_runtime_state* state);
+tulip_runtime_module* runtime_create_builtins_module(tulip_runtime_state* state);
