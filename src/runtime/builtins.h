@@ -11,14 +11,16 @@
 typedef struct runtime_native_defs {
   LLVMValueRef build_tag;
   LLVMValueRef build_string;
-  LLVMValueRef build_int;
-  LLVMValueRef build_float;
+  LLVMValueRef build_integral;
+  LLVMValueRef build_fractional;
   LLVMValueRef build_closure;
   LLVMValueRef build_fnptr;
 
   LLVMValueRef inspect_type;
   LLVMValueRef local_scope_lookup;
   LLVMValueRef local_scope_set;
+
+  LLVMValueRef pattern_scope_reset;
 
   LLVMValueRef test_boolean;
 

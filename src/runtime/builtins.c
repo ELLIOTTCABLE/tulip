@@ -32,34 +32,34 @@ extern void builtin_print(tulip_runtime_value* s) {}
 //        the best way to do this may actually just be a global var
 
 // runtime value constructors
-extern value_ref native_build_tag(const char* tag, unsigned int length, value_ref* contents) {
+extern value_ref native_build_tag(tulip_runtime_state* state, const char* tag, unsigned int length, value_ref* contents) {
   tulip_runtime_value v;
   v.type = tulip_value_tag;
   v.tag = (tulip_runtime_tag){tag, length, contents};
 
-  return region_insert_value(NULL, v);
+  return region_insert_value(state->values, v);
 }
 
-extern value_ref native_build_string(const char* value) {
+extern value_ref native_build_string(tulip_runtime_state* state, const char* value) {
   tulip_runtime_value v = {.type = tulip_value_string, .string = (tulip_runtime_string) {strlen(value), value}};
 
-  return region_insert_value(NULL, v);
+  return region_insert_value(state->values, v);
 }
 
-extern value_ref native_build_int(long long value) {
+extern value_ref native_build_integral(tulip_runtime_state* state, long long value) {
   tulip_runtime_value v = {.type = tulip_value_integral, .integral = (tulip_runtime_integral){value}};
 
-  return region_insert_value(NULL, v);
+  return region_insert_value(state->values, v);
 }
 
-extern value_ref native_build_float(double value) {
+extern value_ref native_build_fractional(tulip_runtime_state* state, double value) {
   tulip_runtime_value v = {.type = tulip_value_fractional, .fractional = (tulip_runtime_fractional){value}};
 
-  return region_insert_value(NULL, v);
+  return region_insert_value(state->values, v);
 }
 
 // constructs a closure with an empty scope
-extern value_ref native_build_closure(value_ref fn) {
+extern value_ref native_build_closure(tulip_runtime_state* state, value_ref fn) {
   // [todo] thread scope parent
   // [note] be careful about lexical scoping rules here
   tulip_runtime_scope* s = scope_init(NULL);
@@ -67,22 +67,21 @@ extern value_ref native_build_closure(value_ref fn) {
   v.type = tulip_value_closure;
   v.closure = (tulip_runtime_closure){s, fn};
 
-  // [todo] see above
-  return region_insert_value(NULL, v);
+  return region_insert_value(state->values, v);
 }
 
-extern value_ref native_build_fnptr(void* fn) {
+extern value_ref native_build_fnptr(tulip_runtime_state* state, void* fn) {
   tulip_runtime_fnptr fnptr = (tulip_runtime_fnptr) fn;
   tulip_runtime_value v;
   v.type = tulip_value_fnptr;
   v.fnptr = fnptr;
 
-  return region_insert_value(NULL, v);
+  return region_insert_value(state->values, v);
 }
 
 // native value inspection
-extern char* native_inspect_type(value_ref v) {
-  tulip_runtime_value* val = region_get_value(NULL, v);
+extern char* native_inspect_type(tulip_runtime_state* state, value_ref v) {
+  tulip_runtime_value* val = region_get_value(state->values, v);
 
   switch (val->type) {
   case tulip_value_tag:
@@ -100,10 +99,8 @@ extern char* native_inspect_type(value_ref v) {
   }
 }
 
-extern value_ref native_local_scope_lookup(void* scope, const char* name) {
-  tulip_runtime_scope* s = (tulip_runtime_scope*) scope;
-
-  value_ref ret = scope_lookup(s, name);
+extern value_ref native_local_scope_lookup(tulip_runtime_scope* scope, const char* name) {
+  value_ref ret = scope_lookup(scope, name);
 
   if (ret) {
     return ret;
@@ -113,17 +110,21 @@ extern value_ref native_local_scope_lookup(void* scope, const char* name) {
   }
 }
 
-extern void native_local_scope_set(void* scope, const char* name, void* value) {
-  tulip_runtime_scope* s = (tulip_runtime_scope*) scope;
-  value_ref v = (value_ref) value;
-
-  scope_insert(s, name, v);
+extern void native_local_scope_set(tulip_runtime_scope* scope, const char* name, value_ref value) {
+  scope_insert(scope, name, value);
 
   return;
 }
 
-extern bool native_test_boolean(value_ref v) {
-  tulip_runtime_value* val = region_get_value(NULL, v);
+extern void native_pattern_scope_reset(tulip_runtime_state* state, tulip_runtime_scope* scope) {
+  tulip_runtime_scope* s = scope_init(scope->parent);
+  scope_free(scope, state->values);
+  scope = s; // [note] this may not be available in llvm context like i want
+}
+
+extern bool native_test_boolean(tulip_runtime_state* state, value_ref v) {
+  tulip_runtime_value* val = region_get_value(state->values, v);
+
   switch (val->type) {
   case tulip_value_tag:
     if (strcmp(val->tag.name, "t") == 0) {
@@ -202,14 +203,120 @@ tulip_runtime_module* runtime_create_builtins_module(tulip_runtime_state* state)
   return tulip_mod;
 }
 
+// [pretty] this looks atrocious and demands to be reworked
 runtime_native_defs runtime_create_native_decls(tulip_runtime_module* mod, tulip_runtime_state* state) {
-  // [todo] add wrappers to native functions to thread the state->values and mod->module_scope pointers
   runtime_native_defs defs;
 
-  defs.build_tag = LLVMAddFunction(mod->llvm_module, "native_build_tag", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]) { LLVMPointerType(LLVMInt8Type(), 0), LLVMInt64Type(), LLVMPointerType(tulip_value_type, 0)}, 3, false));
+  LLVMValueRef state_ptr = LLVMConstIntToPtr(LLVMConstInt(LLVMInt64Type(), (long long) state, false), LLVMPointerType(LLVMVoidType(), 0));
+  // [note] these definitions get collected when their module does, so treating the module pointer as constant is safe
+  LLVMValueRef mod_ptr = LLVMConstIntToPtr(LLVMConstInt(LLVMInt64Type(), (long long) mod, false), LLVMPointerType(LLVMVoidType(), 0));
+
+  LLVMValueRef native_fn;
+  LLVMValueRef ret;
+  LLVMBuilderRef b = LLVMCreateBuilder();
+
+  // build_tag
+
+  native_fn = LLVMAddFunction(mod->llvm_module, "native_build_tag", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt64Type(), LLVMPointerType(tulip_value_type, 0)}, 4, false));
   LLVMAddGlobalMapping(state->jit_instance, defs.build_tag, &native_build_tag);
 
-  defs.build
+  defs.build_tag = LLVMAddFunction(mod->llvm_module, "_native_build_tag", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){LLVMPointerType(LLVMInt8Type(), 0), LLVMInt64Type(), LLVMPointerType(tulip_value_type, 0)}, 3, false));
+  LLVMPositionBuilderAtEnd(b, LLVMAppendBasicBlock(defs.build_tag, ""));
+  LLVMValueRef name = LLVMGetNextParam(defs.build_tag);
+  LLVMValueRef len = LLVMGetNextParam(defs.build_tag);
+  LLVMValueRef contents = LLVMGetNextParam(defs.build_tag);
+  ret = LLVMBuildCall(b, native_fn, (LLVMValueRef[]){state_ptr, name, len, contents}, 4, "");
+  LLVMBuildRet(b, ret);
+
+  // build_string
+
+  native_fn = LLVMAddFunction(mod->llvm_module, "native_build_string", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), LLVMPointerType(LLVMInt8Type(), 0)}, 2, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.build_string, &native_build_string);
+
+  defs.build_string = LLVMAddFunction(mod->llvm_module, "_native_build_string", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){LLVMPointerType(LLVMInt8Type(), 0)}, 1, false));
+  LLVMPositionBuilderAtEnd(b, LLVMAppendBasicBlock(defs.build_string, ""));
+  LLVMValueRef string = LLVMGetNextParam(defs.build_string);
+  ret = LLVMBuildCall(b, native_fn, (LLVMValueRef[]){state_ptr, string}, 2, "");
+  LLVMBuildRet(b, ret);
+
+  // build_integral
+
+  native_fn = LLVMAddFunction(mod->llvm_module, "native_build_integral", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), LLVMInt64Type()}, 2, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.build_integral, &native_build_string);
+
+  defs.build_integral = LLVMAddFunction(mod->llvm_module, "_native_build_integral", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){LLVMInt64Type()}, 1, false));
+  LLVMPositionBuilderAtEnd(b, LLVMAppendBasicBlock(defs.build_integral, ""));
+  LLVMValueRef integral = LLVMGetNextParam(defs.build_integral);
+  ret = LLVMBuildCall(b, native_fn, (LLVMValueRef[]){state_ptr, integral}, 2, "");
+  LLVMBuildRet(b, ret);
+
+  // build_fractional
+
+  native_fn = LLVMAddFunction(mod->llvm_module, "native_build_fractional", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), LLVMDoubleType()}, 2, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.build_fractional, &native_build_fractional);
+
+  defs.build_fractional = LLVMAddFunction(mod->llvm_module, "_native_build_fractional", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){LLVMDoubleType()}, 1, false));
+  LLVMPositionBuilderAtEnd(b, LLVMAppendBasicBlock(defs.build_fractional, ""));
+  LLVMValueRef fractional = LLVMGetNextParam(defs.build_fractional);
+  ret = LLVMBuildCall(b, native_fn, (LLVMValueRef[]){state_ptr, fractional}, 2, "");
+  LLVMBuildRet(b, ret);
+
+  // build_closure
+
+  native_fn = LLVMAddFunction(mod->llvm_module, "native_build_closure", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), tulip_value_type}, 2, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.build_closure, &native_build_closure);
+
+  defs.build_closure = LLVMAddFunction(mod->llvm_module, "_native_build_closure", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){tulip_value_type}, 1, false));
+  LLVMPositionBuilderAtEnd(b, LLVMAppendBasicBlock(defs.build_closure, ""));
+  LLVMValueRef target = LLVMGetNextParam(defs.build_closure);
+  ret = LLVMBuildCall(b, native_fn, (LLVMValueRef[]){state_ptr, target}, 2, "");
+  LLVMBuildRet(b, ret);
+
+  // build_fnptr
+
+  native_fn = LLVMAddFunction(mod->llvm_module, "native_build_fnptr", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), LLVMPointerType(LLVMVoidType(), 0)}, 2, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.build_fnptr, &native_build_fnptr);
+
+  defs.build_fnptr = LLVMAddFunction(mod->llvm_module, "_native_build_closure", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){LLVMPointerType(LLVMVoidType(), 0)}, 1, false));
+  LLVMPositionBuilderAtEnd(b, LLVMAppendBasicBlock(defs.build_fnptr, ""));
+  LLVMValueRef fn = LLVMGetNextParam(defs.build_fnptr);
+  ret = LLVMBuildCall(b, native_fn, (LLVMValueRef[]){state_ptr, fn}, 2, "");
+  LLVMBuildRet(b, ret);
+
+  // inspect_type
+
+  // scope_lookup
+  // [todo] how should the local scope get passed here?
+
+  defs.local_scope_lookup = LLVMAddFunction(mod->llvm_module, "native_local_scope_lookup", LLVMFunctionType(tulip_value_type, (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), LLVMPointerType(LLVMInt8Type(), 0)}, 2, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.local_scope_lookup, &native_local_scope_lookup);
+
+  // scope_set
+
+  defs.local_scope_set = LLVMAddFunction(mod->llvm_module, "native_local_scope_set", LLVMFunctionType(LLVMVoidType(), (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), LLVMPointerType(LLVMInt8Type(), 0), tulip_value_type}, 3, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.local_scope_set, &native_local_scope_set);
+
+  // pattern_scope_reset
+
+  native_fn = LLVMAddFunction(mod->llvm_module, "native_pattern_scope_reset", LLVMFunctionType(LLVMVoidType(), (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), LLVMPointerType(LLVMVoidType(), 0)}, 2, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.pattern_scope_reset, &native_pattern_scope_reset);
+
+  defs.pattern_scope_reset = LLVMAddFunction(mod->llvm_module, "_native_pattern_scope_reset", LLVMFunctionType(LLVMVoidType(), (LLVMTypeRef[]){LLVMPointerType(LLVMVoidType(), 0)}, 1, false));
+  LLVMPositionBuilderAtEnd(b, LLVMAppendBasicBlock(defs.pattern_scope_reset, ""));
+  LLVMValueRef scope = LLVMGetNextParam(defs.pattern_scope_reset);
+  ret = LLVMBuildCall(b, native_fn, (LLVMValueRef[]){state_ptr, scope}, 2, "");
+  LLVMBuildRet(b, ret);
+
+  // test_boolean
+
+  native_fn = LLVMAddFunction(mod->llvm_module, "native_test_boolean", LLVMFunctionType(LLVMInt1Type(), (LLVMTypeRef[]){ LLVMPointerType(LLVMVoidType(), 0), tulip_value_type}, 2, false));
+  LLVMAddGlobalMapping(state->jit_instance, defs.test_boolean, &native_test_boolean);
+
+  defs.test_boolean = LLVMAddFunction(mod->llvm_module, "_native_test_boolean", LLVMFunctionType(LLVMInt1Type(), (LLVMTypeRef[]){tulip_value_type}, 1, false));
+  LLVMPositionBuilderAtEnd(b, LLVMAppendBasicBlock(defs.test_boolean, ""));
+  LLVMValueRef subject = LLVMGetNextParam(defs.test_boolean);
+  ret = LLVMBuildCall(b, native_fn, (LLVMValueRef[]){state_ptr, subject}, 2, "");
+  LLVMBuildRet(b, ret);
 
   return defs;
 }
