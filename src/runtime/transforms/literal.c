@@ -43,6 +43,5 @@ LLVMValueRef tulip_runtime_transform_literal(tulip_runtime_module* mod, char* de
     case ast_literal_string:
       return LLVMConstString(lit.string, strlen(lit.string), false);
     }
-
   }
 }

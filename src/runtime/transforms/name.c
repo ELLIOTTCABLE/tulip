@@ -23,7 +23,7 @@ LLVMValueRef tulip_runtime_transform_name_get(tulip_runtime_module* mod, char* d
       LLVMPositionBuilderAtEnd(b, bb);
 
       // [note] the string paramater in this call is used by the optimizer i think, but isn't semantically relevant
-      LLVMBuildCall(b, extern_fn, NULL, 0, "extcall");
+      LLVMBuildCall(b, extern_fn, NULL, 0, "");
 
       // [todo] should probably just but a builder in the context struct and reuse it
       //        verify that it only tracks position state

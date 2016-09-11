@@ -38,7 +38,9 @@ tulip_runtime_state tulip_runtime_start(tulip_runtime_options o) {
   return state;
 }
 
-// tulip_runtime_call(module_ref module, const char* function)
+void tulip_runtime_call(module_ref module, const char* function) {
+  
+}
 
 void tulip_runtime_stop(tulip_runtime_state state) {
   // [todo] free modules in module region
