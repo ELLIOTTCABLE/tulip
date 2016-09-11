@@ -9,9 +9,11 @@ LLVMValueRef tulip_runtime_transform_block(tulip_runtime_module* mod, char* name
 
     LLVMBasicBlockRef bb = LLVMAppendBasicBlock(local_fn, "");
 
-
     tulip_runtime_context content_ctx = ctx;
     content_ctx.block = bb;
+    content_ctx.local_scope = scope_init(ctx.local_scope);
+
+    // [todo] scope destruction at runtime
 
     LLVMValueRef ret;
 
