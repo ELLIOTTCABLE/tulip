@@ -6,7 +6,7 @@ typedef enum tulip_mode {
   none,
   main_file,
   repl,
-  // [note] we might want tulip debugging and profiling tools to share the same interface 
+  // [note] we might want tulip debugging and profiling tools to share the same interface
   // debug,
   // profile
 } tulip_mode;

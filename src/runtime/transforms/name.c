@@ -89,7 +89,3 @@ LLVMValueRef tulip_runtime_transform_name_get(tulip_runtime_module* mod, char* d
     }
   }
 }
-
-// [todo] name assignment semantics
-//        implement along with let
-//LLVMValueRef tulip_runtime_transform_name_set() {}
