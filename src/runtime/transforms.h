@@ -5,7 +5,7 @@
 
 #include "runtime/transforms/common.h"
 
-void tulip_runtime_compile_module(tulip_runtime_module* mod);
+void tulip_runtime_compile_module(tulip_runtime_state* state, tulip_runtime_module* mod);
 
 LLVMValueRef tulip_runtime_transform_name_get(tulip_runtime_module* mod, char* def_name, tulip_runtime_ast_name name, tulip_runtime_context ctx);
 //LLVMValueRef tulip_runtime_transform_name_set();

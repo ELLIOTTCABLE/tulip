@@ -35,9 +35,12 @@ LLVMValueRef tulip_runtime_transform_core(tulip_runtime_module* mod, char* name,
 }
 
 // compiles all top-level definitions into ir
-void tulip_runtime_compile_module(tulip_runtime_module* mod) {
+void tulip_runtime_compile_module(tulip_runtime_state* state, tulip_runtime_module* mod) {
   if (mod->status == TULIP_MODULE_UNCOMPILED || mod->status == TULIP_MODULE_COMPILED) {
     mod->llvm_module = LLVMModuleCreateWithName(mod->name);
+
+    mod->module_scope = scope_init(NULL);
+    mod->native_defs = runtime_create_native_decls(mod, state);
 
     for (unsigned int i = 0; i < mod->num_definitions; i++) {
       char* bind_name = mod->definitions[i].name;
