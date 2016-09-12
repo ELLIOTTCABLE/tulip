@@ -13,7 +13,21 @@ function compile(reader)
   local errors, _ = Errors.error_scope(function()
     out.skel = parse_skeleton(lexer)
     if Errors.ok() then out.expanded = Macros.macro_expand(out.skel) end
-    if Errors.ok() then out.compiled = compiler.compile_expr(List.head(out.expanded)) end
+    if Errors.ok() then out.compiled = compiler.compile_root_expr(List.head(out.expanded)) end
+  end)
+
+  return errors, out
+end
+
+local function compile_module(reader)
+  local lexer = Lexer.new(reader)
+  local out = {}
+  local compiler = Compiler.compiler()
+
+  local errors, _ = Errors.error_scope(function()
+    out.skel = parse_skeleton(lexer)
+    if Errors.ok() then out.expanded = Macros.macro_expand(out.skel) end
+    if Errors.ok() then out.compiled = compiler.compile_module('testy', out.expanded) end
   end)
 
   return errors, out
@@ -44,8 +58,27 @@ local function repl()
   end
 end
 
+local function test_file()
+  local input = "@module Foo [ bar = 1; baz = zot ]"
+
+  local reader = Stubs.string_reader('input.tlp', input)
+
+  print('compiling: ', inspect_value(input))
+  local errors, out = compile_module(reader)
+
+  if #errors == 0 then
+    print('parsed: ' .. Stubs.inspect_value(out.skel))
+    print('expanded: ' .. Stubs.inspect_value(out.expanded))
+    print('compiled: ' .. Stubs.inspect_value(out.compiled.members))
+  else
+    for _,e in pairs(errors) do
+      print('error: ' .. Stubs.inspect_value(e))
+    end
+  end
+end
+
 _G.init = function()
-  repl()
+  test_file()
 end
 
 return {

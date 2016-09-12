@@ -117,7 +117,7 @@ function split_once(list, pred)
   while is_cons(list) do
     local h, t = head(list), tail(list)
     if pred(h) then
-      return reverse(out), list
+      return reverse(out), t
     else
       out = cons(h, out)
       list = t
@@ -166,6 +166,7 @@ _G.List = {
   join = join,
   each_slice = each_slice,
   split = split,
+  split_once = split_once,
   size = size,
   foldl = foldl,
   foldr = foldr,

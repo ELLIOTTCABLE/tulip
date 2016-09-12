@@ -61,11 +61,30 @@ function matches_tag(t, name, arity)
   return true
 end
 
+function inspect_table(t)
+  local out = '{'
+  local first = true
+  for k, v in pairs(t) do
+    if first then
+      first = false
+    else
+      out = out .. ', '
+    end
+
+    out = out .. '[' .. inspect_value(k) .. '] = ' .. inspect_value(v)
+  end
+
+  out = out .. '}'
+
+  return out
+end
+
 -- TODO implement in C
 function inspect_value(t)
   if type(t) == 'table' and t.tag then return inspect_tag(t)
   elseif type(t) == 'table' and t.tokid then return inspect_token(t)
   elseif type(t) == 'string' then return '"' .. t .. '"'
+  elseif type(t) == 'table' then return inspect_table(t)
   else
     return tostring(t)
   end

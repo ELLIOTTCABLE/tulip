@@ -21,7 +21,6 @@ local function ok()
 end
 
 local function error(error_tag, ...)
-  print('custom error!')
   error_obj = tag(error_tag, ...)
   table.insert(state.errors, error_obj)
   return error_obj

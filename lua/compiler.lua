@@ -28,6 +28,10 @@ function cache(fn)
   local state = {}
 
   state.impl = function()
+    local val = fn()
+    state.impl = function()
+      return val
+    end
     return val
   end
 
@@ -47,25 +51,30 @@ function Assign.new(_name, _module, _source)
   self.module = _module
 
   self.patterns_and_body = cache(function()
-    return List.split_once(_source, function(e) return is_tok(e, token_ids.EQ) end)
+    local p, b = List.split_once(_source, function(e) return is_tok(e, token_ids.EQ) end)
+    return { patterns = p, body = b }
   end)
 
-  self.patterns = function() local p, _ = self.patterns_and_body(); return p end
-  self.body     = function() local _, b = self.patterns_and_body(); return b end
+  self.patterns = function() return self.patterns_and_body().patterns end
+  self.body     = function() return self.patterns_and_body().body end
 
   self.compile = function()
     local body = self.compile_body()
     local patterns = self.patterns()
 
     if List.is_nil(patterns) then
-      return body
+      return tag('assign', _name, body)
     else
       return error('todo')
     end
   end
 
   self.compile_body = function()
-    return Expr.new(self.module, Scope.root, self.body()).compile()
+    if self.body() == nil then
+      return error(_source, 'invalid assignment')
+    end
+
+    return Expr.new(self.module, self.body()).compile()
   end
 
   return self
@@ -83,14 +92,18 @@ function Expr.new(_module, _source)
   local compile_segment
 
   function apply(fn, ...)
-    return tag('apply', fn, List.list({...}))
+    if select('#', ...) == 0 then
+      return fn
+    else
+      return tag('apply', fn, List.list({...}))
+    end
   end
 
   function compile_term(skel)
     if is_tok(skel, token_ids.NAME) then
       -- NOTE: name values get checked and fully
       -- module-qualified in post-processing
-      return tag('name', skel_val(skel))
+      return tag('unresolved-name', skel)
     elseif is_tok(skel, token_ids.INT) then
       return tag('constant', tag('int', skel_val(skel)))
     elseif is_tok(skel, token_ids.STRING) then
@@ -166,8 +179,12 @@ function Expr.new(_module, _source)
     end
   end
 
+  function qualify_names(compiled_expr)
+    return Scope.for_module(_module).qualify(compiled_expr)
+  end
+
   self.compile = function()
-    return compile_term(_source)
+    return qualify_names(apply(unpack(compile_segment(true, _source))))
   end
 
   return self
@@ -194,7 +211,7 @@ function Module.new(_name, _parent, _source)
       elseif is_tok(head, token_ids.NAME) then
         return Assign.new(skel_val(head), self, List.tail(body))
       else
-        error('malformed module member')
+        return error('malformed module member')
       end
     end)
   end)
@@ -219,17 +236,21 @@ function Module.new(_name, _parent, _source)
     end
   end)
 
-  self.qualify = function(name)
+  self.qualify = function(name, name_skel)
     if self.has_own_name(name) then
       return self.qualpath() .. '/' .. name
     elseif _parent then
-      return _parent.qualify(name)
+      return _parent.qualify(name, name_skel)
     else
-      error('unbound name `' .. name .. '`')
+      return error(name_skel, 'unbound name `' .. name .. '`')
     end
   end
 
   self.compile = function()
+    return {
+      name = self.qualpath(),
+      members = List.map(self.members(), function(x) return x.compile() end)
+    }
   end
 
   return self
@@ -237,7 +258,7 @@ end
 
 Module.root = Module.new('', nil, List.empty)
 
-function Scope.new(_parent)
+function Scope.new(_parent, _module)
   local self = {}
   self.names = {}
   self.bind = function(name) self.names['<name>'..name] = true end
@@ -250,9 +271,53 @@ function Scope.new(_parent)
   end
 
   self.extend = function() return Scope.new(self) end
+
+  self.qualify = function(expr)
+    if matches_tag(expr, 'unresolved-name', 1) then
+      local name_skel = tag_get(expr, 0)
+      local name = skel_val(name_skel)
+
+      if self.has_name(name) then
+        return expr
+      else
+        return tag('name', _module.qualify(name, name_skel))
+      end
+    elseif matches_tag(expr, 'apply', 2) then
+      local fn = tag_get(expr, 0)
+      local args = tag_get(expr, 1)
+      return tag('apply', self.qualify(fn), List.map(args, self.qualify))
+    elseif matches_tag(expr, 'lambda', 2) then
+      local arg_list = tag_get(expr, 0)
+      local body = tag_get(expr, 1)
+
+      local new_scope = self.extend()
+      List.each(arg_list, function(n) new_scope.bind(n) end)
+      return tag('lambda', arg_list, new_scope.qualify(body))
+    elseif matches_tag(expr, 'block', 1) then
+      local elements = tag_get(expr, 0)
+      local new_scope = self.extend()
+      List.each(elements, function(el)
+        if not matches_tag(el, 'assign', 2) then return end
+
+        new_scope.bind(tag_get(el, 0))
+      end)
+
+      return tag('block', List.map(elements, function(el)
+        if matches_tag(el, 'assign', 2) then
+          return tag('assign', tag_get(el, 0), new_scope.qualify(tag_get(el, 1)))
+        else
+          error(el, 'can\'t expand!')
+        end
+      end))
+    else
+      return expr
+    end
+  end
+
+  return self
 end
 
-Scope.root = Scope.new(nil)
+function Scope.for_module(module) return Scope.new(nil, module) end
 
 local function compiler()
   function compile_item(item)
@@ -265,6 +330,10 @@ local function compiler()
     return Expr.new(module, skels).compile()
   end
 
+  function compile_root_expr(skels)
+    return compile_expr(skels, Module.root)
+  end
+
   function compile_module(name, skels)
     local module = Module.new(name, Module.root, skels)
     return module.compile()
@@ -272,6 +341,7 @@ local function compiler()
 
   return {
     compile_expr = compile_expr,
+    compile_root_expr = compile_root_expr,
     compile_module = compile_module,
     compile_item = compile_item,
   }
