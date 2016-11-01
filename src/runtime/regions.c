@@ -19,6 +19,11 @@ value_region* init_value_region(unsigned int num_values) {
   return region_struct;
 }
 
+void free_value_region(value_region* r) {
+  free(r->region);
+  free(r);
+}
+
 // naive gc on tulip heap
 // [todo]
 // will be left unimplemented until necessary
@@ -70,6 +75,12 @@ module_region* init_module_region(unsigned int num_modules) {
   region_struct->num_used = 0;
   region_struct->cursor = 0;
   region_struct->region = malloc(sizeof(module_metadata) * num_modules);
+  return region_struct;
+}
+
+void free_module_region(module_region* r) {
+  free(r->region);
+  free(r);
 }
 
 module_ref region_insert_module(module_region* r, tulip_runtime_module m) {
@@ -89,7 +100,13 @@ void region_delete_module(module_region* r, module_ref m) {
 }
 
 tulip_runtime_module* region_query_module_by_name(const char* name) {
+  return NULL;
+}
+
+tulip_runtime_module* region_query_module_by_id(module_region* r, module_ref m) {
+  return NULL;
 }
 
 tulip_runtime_module* region_query_module_by_version(const char* name, tulip_runtime_module_version ver) {
+  return NULL;
 }

@@ -24,6 +24,6 @@ help:
 .PHONY: binary
 binary: $(BINARY)
 
-$(BINARY): $(srcs) $(main)
+$(BINARY): $(srcs) $(libs) $(main)
 	mkdir -p build
 	clang $(cflags) $^ -o $@

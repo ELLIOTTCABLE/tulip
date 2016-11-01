@@ -231,7 +231,9 @@ void destroy_ast_value(tulip_runtime_ast_value* v){
   free(v);
 }
 
-char* show_ast(tulip_runtime_ast_value* ast) {}
+char* show_ast(tulip_runtime_ast_value* ast) {
+  return "<TODO: show_ast>";
+}
 
 char* render_qualified_name(tulip_runtime_ast_name name, tulip_runtime_module* context) {
   char* rendered_path;
