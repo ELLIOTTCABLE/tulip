@@ -154,6 +154,14 @@ local function find(list, pred)
   return find_map(list, function(e) if pred(e) then return e end end)
 end
 
+local function to_table(list)
+  local out = {}
+  each(list, function(el)
+    table.append(out, el)
+  end)
+  return out
+end
+
 Stubs.impl_inspect_tag('nil', 0, function() return '\\list()' end)
 Stubs.impl_inspect_tag('cons', 2, function(head, tail)
   local inspects = map(cons(head, tail), Stubs.inspect_value)
@@ -183,6 +191,7 @@ _G.List = {
   foldl = foldl,
   foldr = foldr,
   is_singleton = is_singleton,
+  to_table = to_table,
 }
 
 return List

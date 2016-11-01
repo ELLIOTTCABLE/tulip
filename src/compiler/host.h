@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <lua.h>
+#include "compiler/interchange.h"
 #include "types/value.h"
 
 // character reader
@@ -28,3 +29,4 @@ typedef struct tulip_compiler_state {
 
 tulip_compiler_state* tulip_compiler_start();
 void tulip_compiler_stop();
+main_file_output tulip_compiler_compile_file(tulip_compiler_state* state, char* file_name);

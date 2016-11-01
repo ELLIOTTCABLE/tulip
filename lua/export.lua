@@ -27,7 +27,7 @@ local function compile_module(reader)
   local errors, _ = Errors.error_scope(function()
     out.skel = parse_skeleton(lexer)
     if Errors.ok() then out.expanded = Macros.macro_expand(out.skel) end
-    if Errors.ok() then out.compiled = compiler.compile_module('testy', out.expanded) end
+    if Errors.ok() then out.compiled = compiler.compile_root_module(out.expanded) end
   end)
 
   return errors, out
@@ -80,7 +80,62 @@ local function test_file()
 end
 
 _G.init = function()
-  test_file()
+  -- pass
+end
+
+local function flatten_modules(module)
+  local out = {}
+
+  local function go(module)
+    local assigns = {}
+
+    List.each(module.members, function(member)
+      if matches_tag(member, 'assign', 2) then
+        local name = tag_get(member, 0)
+        local body = tag_get(member, 1)
+
+        local marshalled = to_host_tree(body)
+
+        table.insert(assigns, {name=name,body=marshalled})
+      elseif member.name then
+        go(member)
+      end
+    end)
+
+    table.insert(out, {name = module.name, members = assigns})
+  end
+
+  go(module)
+
+  return out
+end
+
+_G.compile_file = function(file_name)
+  local file = io.open(file_name, 'r')
+  local input = file:read('*all')
+
+  local reader = Stubs.string_reader(file_name, input)
+
+  print('compiling: ', inspect_value(input))
+  local errors, out = compile_module(reader)
+
+  if #errors == 0 then
+    print('parsed: ' .. Stubs.inspect_value(out.skel))
+    print('expanded: ' .. Stubs.inspect_value(out.expanded))
+    print('compiled: ' .. Stubs.inspect_value(out.compiled))
+
+    local main_module = out.compiled
+
+    local flattened = flatten_modules(main_module)
+
+    print('flattened: ' .. Stubs.inspect_value(flattened))
+
+    return flattened
+  else
+    for _,e in pairs(errors) do
+      print('error: ' .. Stubs.inspect_value(e))
+    end
+  end
 end
 
 return {

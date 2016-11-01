@@ -25,7 +25,8 @@ end
 function to_host_tree(t)
   if type(t) == 'table' and t.tag then
     local host_values = {}
-    for i, v in t.values do
+    print('to_host_tree tag', inspect_value(t))
+    for i, v in pairs(t.values) do
       host_values[i] = to_host_tree(v)
     end
 

@@ -362,6 +362,7 @@ function Module.new(_name, _parent, _source)
 
   self.members = cache(function()
     return List.map(_source, function(item)
+      print('item', inspect_value(item))
       local body = tag_get(item, 1)
       local head = List.head(body)
 
@@ -529,10 +530,29 @@ local function compiler()
     return module.compile()
   end
 
+  function compile_root_module(source)
+    local items = source
+    local name = 'testy'
+
+    local first = tag_get(List.head(source), 1)
+    if is_tok(List.head(first), token_ids.ATMACRO) and
+       skel_val(List.head(first)) == 'module' and
+       List.size(first) == 2 then
+      items = List.tail(source)
+      name = skel_val(List.head(List.tail(first)))
+    end
+
+    print('name', name)
+    print('items', inspect_value(items))
+
+    return compile_module(name, items)
+  end
+
   return {
     compile_expr = compile_expr,
     compile_root_expr = compile_root_expr,
     compile_module = compile_module,
+    compile_root_module = compile_root_module,
     compile_item = compile_item,
   }
 end

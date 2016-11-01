@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "compiler/host.h"
-#include "types/value.h"
 
 static void stackDump (lua_State *L) {
   int i;
@@ -309,14 +308,24 @@ tulip_compiler_state* tulip_compiler_start() {
     printf("lua loadtime error: %s\n", lua_tostring(lua, -1));
   }
 
-  lua_getglobal(lua, "init");
+  return state;
+}
 
-  if (lua_pcall(lua, 0, 1, 0) != 0) {
+main_file_output tulip_compiler_compile_file(tulip_compiler_state* state, char* file_name) {
+  lua_State *lua = state->lua_state;
+
+  lua_getglobal(lua, "compile_file");
+
+  lua_pushstring(lua, file_name);
+
+  if (lua_pcall(lua, 1, 0, 0) != 0) {
     printf("lua runtime error: %s\n", lua_tostring(lua, -1));
   }
 
-  return state;
+  main_file_output o;
+  return o;
 }
+
 
 void tulip_compiler_stop(tulip_compiler_state* state) {
   lua_close(state->lua_state);
