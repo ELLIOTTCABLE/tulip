@@ -1,4 +1,13 @@
 local Errors = require('lua/errors')
+local synthetic_token = require('lua/macros').synthetic_token
+
+local gensym_state = { index = 0 }
+local tag_lit
+
+local function gensym(name)
+  gensym_state.index = gensym_state.index + 1
+  return '#' .. name .. '-' .. gensym_state.index
+end
 
 local function is_tok(skel, id)
   return matches_tag(skel, 'skeleton/token', 1) and check_tok(tag_get(skel, 0), id)
@@ -80,6 +89,67 @@ function Assign.new(_name, _module, _source)
   return self
 end
 
+local function ifelse(cond, if_true, if_false)
+  return tag('branch', List.list{
+    tag('cond', cond, if_true),
+    tag('cond', tag_lit('t'), if_false)
+  })
+end
+
+local function apply_list(list)
+  if List.is_nil(list) then error('empty apply')
+  elseif List.is_singleton(list) then return List.head(list)
+  else return tag('apply', List.head(list), List.tail(list))
+  end
+end
+
+local function tuple(members)
+  if List.is_nil(members) then error('empty tuple') end
+  local out = List.head(members)
+  List.each(List.tail(members), function(e)
+
+  end)
+end
+
+local function apply(...)
+  return apply_list(List.list{...})
+end
+
+local function block(...)
+  return tag('block', List.list{...})
+end
+
+local function let(name, val, body)
+  return tag('block', List.list{
+    tag('let', name, val),
+    body
+  })
+end
+
+function tag_lit(name, ...)
+  local arity = select('#', ...)
+  return tag('tag', name, arity, List.list{...})
+end
+
+local function destruct_match(val, index)
+  return tag('builtin', 'destruct', List.list{
+    val,
+    tag('literal', tag('int', index))
+  })
+end
+
+local function crash()
+  return tag('builtin', 'crash', List.empty)
+end
+
+local function test_match(tag_val, name, arity)
+  return tag('builtin', 'matches-tag', List.list{
+    tag_val,
+    tag('literal', tag('string', name)),
+    tag('literal', tag('int', arity))
+  })
+end
+
 function Expr.new(_module, _source)
   local self = {}
   self.module = module
@@ -91,21 +161,13 @@ function Expr.new(_module, _source)
   local compile_term
   local compile_segment
 
-  function apply(fn, ...)
-    if select('#', ...) == 0 then
-      return fn
-    else
-      return tag('apply', fn, List.list({...}))
-    end
-  end
-
   function compile_term(skel)
     if is_tok(skel, token_ids.NAME) then
       -- NOTE: name values get checked and fully
       -- module-qualified in post-processing
       return tag('unresolved-name', skel)
     elseif is_tok(skel, token_ids.INT) then
-      return tag('constant', tag('int', skel_val(skel)))
+      return tag('constant', tag('literal', tag('int', tonumber(skel_val(skel)))))
     elseif is_tok(skel, token_ids.STRING) then
       return tag('constant', tag('string', skel_val(skel)))
     elseif is_tok(skel, token_ids.TAGGED) then
@@ -130,14 +192,90 @@ function Expr.new(_module, _source)
     end
   end
 
+  local function compile_pattern_term(term, arg, on_success)
+    if is_tok(term, token_ids.NAME) then
+      return let(skel_val(term), tag('name', arg), on_success)
+    end
+  end
+
+  function compile_pattern(pattern, arg, on_success)
+    local first = List.head(pattern)
+
+    if is_tok(first, token_ids.TAGGED) then
+      local destructure = on_success
+      local index = 0
+      List.each(List.tail(pattern), function(el)
+        local sub_arg = gensym('arg')
+        destructure = let(
+          sub_arg,
+          destruct_match(tag('name', arg), index),
+          compile_pattern_term(sub_pat, sub_arg, destructure, context)
+        )
+        index = index + 1
+      end)
+
+      return ifelse(
+        test_match(tag('name', arg), skel_val(first), List.size(pattern) - 1),
+        destructure,
+        tag_lit('none')
+      )
+    elseif not List.is_singleton(pattern) then
+      return error(pattern, 'more than one expr is not allowed here')
+    else
+      return compile_pattern_term(List.head(pattern), arg, on_success)
+    end
+  end
+
+  local function compile_clause(clause)
+    local terms = tag_get(clause, 1)
+    local pattern, body = List.split_once(terms, function(e)
+      return is_tok(e, token_ids.RARROW)
+    end)
+
+    local arg = gensym('arg')
+
+    local body = compile_pattern(
+      pattern,
+      arg,
+      tag_lit('some', compile_expr(body))
+    )
+
+    return tag('lambda', List.list{arg}, body)
+  end
+
   function compile_lambda(source)
-    return error('todo')
+    if List.is_singleton(source) then
+      local result = gensym('result')
+      return block(
+        tag('let', result, compile_clause(List.head(source))),
+        ifelse(
+          test_match(tag('name', result), 'some', 1),
+          destruct_match(tag('name', result), 0),
+          crash()
+        )
+      )
+    else
+      return error(source, 'todo')
+    end
+  end
+
+  local function add_dash(is_first, segment)
+    local existing_dash = List.find(segment, function(e) return is_tok(e, token_ids.DASH) end)
+
+    if existing_dash and is_first then
+      return error(existing_dash, 'dash can\'t appear in the first segment of a chain')
+    elseif (not dash) and (not is_first) then
+      local synthetic_dash = tag('skeleton/token', synthetic_token('DASH'))
+      return List.reverse(List.cons(synthetic_dash, List.reverse(segment)))
+    else
+      return segment
+    end
   end
 
   function compile_segment(is_first, segment)
     assert(List.is_cons(segment), 'TODO: gracefully handle >>')
 
-    -- add_dash(is_first, segment)
+    segment = add_dash(is_first, segment)
 
     local code_segment = {}
     function yield(thing)
@@ -158,7 +296,7 @@ function Expr.new(_module, _source)
       elseif is_tok(head, token_ids.FLAGKEY) then
         yield(error('TODO: flagkeys'))
       elseif is_tok(head, token_ids.DASH) then
-        yield(error('TODO: dash'))
+        yield(tag('name', 'chain#'))
       else
         yield(compile_term(head))
       end
@@ -170,12 +308,36 @@ function Expr.new(_module, _source)
   end
 
   function compile_expr(expr)
-    -- TODO: implement chaining
-    local terms = compile_segment(false, expr)
-    if #terms == 1 then
-      return terms[1]
+    local chain_lambda = is_tok(List.head(expr), token_ids.GT)
+
+    if chain_lambda then expr = List.tail(expr) end
+
+    local tuple_parts = List.split(expr, function(e) return is_tok(e, token_ids.COMMA) end)
+
+    if not List.is_singleton(tuple_parts) then
+      return make_tuple(List.map(tuple_parts, compile_expr))
+    end
+
+    local raw_chain = List.split(expr, function(e) return is_tok(e, token_ids.GT) end)
+
+    local chain = List.mapi(raw_chain, function(segment, i)
+      return compile_segment(i == 0 and not chain_lambda, segment)
+    end)
+
+    if List.is_singleton(chain) then
+      return apply(unpack(List.head(chain)))
     else
-      return apply(unpack(terms))
+      local chain_size = List.size(chain)
+
+      local block_body = List.mapi(chain, function(el, i)
+        if i + 1 == chain_size then
+          return apply(unpack(el))
+        else
+          return tag('let', 'chain#', apply(unpack(el)))
+        end
+      end)
+
+      return tag('block', block_body)
     end
   end
 
@@ -184,7 +346,7 @@ function Expr.new(_module, _source)
   end
 
   self.compile = function()
-    return qualify_names(apply(unpack(compile_segment(true, _source))))
+    return qualify_names(compile_expr(_source))
   end
 
   return self
@@ -270,7 +432,28 @@ function Scope.new(_parent, _module)
     end
   end
 
-  self.extend = function() return Scope.new(self) end
+  self.inspect = function()
+    local out = 'Scope{'
+    local first = true
+    for key, _ in pairs(self.names) do
+      if first then
+        first = false
+      else
+        out = out .. ','
+      end
+
+      out = out .. string.sub(key, 7, -1)
+    end
+
+    if _parent then
+      out = out .. ':' .. _parent.inspect()
+    end
+
+    out = out .. '}'
+    return out
+  end
+
+  self.extend = function() return Scope.new(self, _module) end
 
   self.qualify = function(expr)
     if matches_tag(expr, 'unresolved-name', 1) then
@@ -278,7 +461,7 @@ function Scope.new(_parent, _module)
       local name = skel_val(name_skel)
 
       if self.has_name(name) then
-        return expr
+        return tag('name', name)
       else
         return tag('name', _module.qualify(name, name_skel))
       end
@@ -293,20 +476,27 @@ function Scope.new(_parent, _module)
       local new_scope = self.extend()
       List.each(arg_list, function(n) new_scope.bind(n) end)
       return tag('lambda', arg_list, new_scope.qualify(body))
+    elseif matches_tag(expr, 'tag', 3) then
+      local tag_name = tag_get(expr, 0)
+      local arity    = tag_get(expr, 1)
+      local elements = tag_get(expr, 2)
+
+      local new_elements = List.map(elements, self.qualify)
+      return tag('tag', tag_name, arity, new_elements)
     elseif matches_tag(expr, 'block', 1) then
       local elements = tag_get(expr, 0)
       local new_scope = self.extend()
       List.each(elements, function(el)
-        if not matches_tag(el, 'assign', 2) then return end
+        if not matches_tag(el, 'let', 2) then return end
 
         new_scope.bind(tag_get(el, 0))
       end)
 
       return tag('block', List.map(elements, function(el)
-        if matches_tag(el, 'assign', 2) then
-          return tag('assign', tag_get(el, 0), new_scope.qualify(tag_get(el, 1)))
+        if matches_tag(el, 'let', 2) then
+          return tag('let', tag_get(el, 0), new_scope.qualify(tag_get(el, 1)))
         else
-          error(el, 'can\'t expand!')
+          return new_scope.qualify(el)
         end
       end))
     else
@@ -347,4 +537,6 @@ local function compiler()
   }
 end
 
-return { compiler = compiler }
+return {
+  compiler = compiler
+}

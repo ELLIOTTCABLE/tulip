@@ -63,6 +63,7 @@ tulip_value build_string(char* s);
 #define is_string(v) is_literal(v, TULIP_LITERAL_STRING)
 #define unwrap_string(v) (is_string(v) ? (v).literal.string : NULL)
 
+tulip_value build_discrete(long n);
 tulip_value build_number(double n);
 #define is_number(v) (is_literal(v, TULIP_LITERAL_NUMBER))
 #define unwrap_number(v) (is_number(v) ? (v).literal.number : NULL)

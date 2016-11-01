@@ -74,6 +74,15 @@ local function map(list, fn)
   return reverse(map_reverse(list, fn))
 end
 
+local function mapi(list, fn)
+  local i = 0
+  return map(list, function(e)
+    local out = fn(e, i)
+    i = i + 1
+    return out
+  end)
+end
+
 local function join(list, join_str)
   if is_nil(list) then return '' end
 
@@ -155,7 +164,10 @@ end)
 _G.List = {
   list = list,
   map = map,
+  mapi = mapi,
+  find = find,
   find_map = find_map,
+  cons = cons,
   reverse = reverse,
   empty = empty,
   head = head,

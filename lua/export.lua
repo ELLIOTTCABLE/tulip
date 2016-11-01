@@ -59,7 +59,9 @@ local function repl()
 end
 
 local function test_file()
-  local input = "@module Foo [ bar = 1; baz = zot ]"
+  -- these should all compile correctly
+  -- local input = "@module Foo [ bar = 1; baz = 2; zot = bar > baz ]"
+  local input = "foo = 1; @module Bar [ baz = foo ]"
 
   local reader = Stubs.string_reader('input.tlp', input)
 

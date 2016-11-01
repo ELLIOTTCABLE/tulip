@@ -96,4 +96,5 @@ end
 return {
   macro_expand_1 = macro_expand_1,
   macro_expand = macro_expand,
+  synthetic_token = synthetic_token,
 }

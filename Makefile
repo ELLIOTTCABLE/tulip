@@ -1,6 +1,7 @@
 cflags = --std=c11 -Isrc/ -g -lm -gdwarf-2 -g3 -lLLVM -l"lua5.2"
 libs   = $(shell find src -name '*.c')
 main   = ./src/main.c
+BINARY = ./build/tulip
 
 BINARY = ./build/tulip
 TEST   = ./build/tulip-test
@@ -23,6 +24,6 @@ help:
 .PHONY: binary
 binary: $(BINARY)
 
-$(BINARY): $(libs) $(main)
+$(BINARY): $(srcs) $(main)
 	mkdir -p build
 	clang $(cflags) $^ -o $@

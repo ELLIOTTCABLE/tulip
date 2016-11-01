@@ -22,6 +22,27 @@ function string_reader(input_name, input)
   }
 end
 
+function to_host_tree(t)
+  if type(t) == 'table' and t.tag then
+    local host_values = {}
+    for i, v in t.values do
+      host_values[i] = to_host_tree(v)
+    end
+
+    return __compiler_create_tag(t.tag, #t.values, unpack(host_values))
+  elseif type(t) == 'string' then
+    return __compiler_build_string(t)
+  elseif type(t) == 'number' then
+    if t % 1 == 0 then
+      return __compiler_build_discrete(t)
+    else
+      error('TODO: floats')
+    end
+  else
+    return tostring(t)
+  end
+end
+
 -- TODO implement in C
 function tag(name, ...)
   return { tag = name, values = {...} }
