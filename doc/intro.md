@@ -187,7 +187,7 @@ The special pattern `_` acts as usual - it matches any value and binds no result
 
 ## Literals and Macros
 
-I strongly dislike macros that can hide in code.  I get really frustrated when I open a source file and see `(foo ...)` and can't tell whether it's a function or a macro until I read documentation.  For these reasons, extensible literals and macros in tulip are all sigiled with `/`.  Here is a basic macro: the list constructor:
+I strongly dislike macros that can hide in code.  I get really frustrated when I open a source file and see `(foo ...)` and can't tell whether it's a function or a macro until I read documentation.  For these reasons, extensible literals and macros in tulip are all sigiled with `\`.  Here is a basic macro: the list constructor:
 
 ``` tulip
 \list[1; 2; 3]
