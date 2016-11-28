@@ -27,7 +27,7 @@ A language is a very large project, and I need your help!  Especially if you are
 
 Tulip is still very much in design mode, so the architecture is still being decided on.  I hang out with a few others in `#tulip` on [Snek][] if you want to see where you can best contribute.  Here are some specific things I'll need help with:
 
-[Snek]: http://snek.translunar.space/ 
+[Snek]: http://snek.jneen.net/
 
 * Design / implementation of the macro definition and parsing system, in lua
 * Implementation of modules / imports (pure design plus maybe some C)
