@@ -407,7 +407,7 @@ If you're queer/trans, a person of color, and/or a woman, we'd love for you to j
   * test infrastructure
   * standard library design.
 
-I could use some help in being able to set aside time to work on tulip - if you like what you see here and want to help make it a reality, you should pledge to the [patreon](https://patreon/jneen)!
+I could use some help in being able to set aside time to work on tulip - if you like what you see here and want to help make it a reality, you should pledge to the [patreon](https://patreon.com/jneen)!
 
 <3 <3 <3
 
